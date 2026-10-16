@@ -35,11 +35,22 @@ begins; this skeleton provides Button, Badge, Card and Skeleton primitives.
 - No personal information, room access codes, or tokens in logs.
 - Health success means both API and database responded, not merely that HTML loaded.
 
+## Stage UI-1 — App Shell & Sticky Nav
+
+The public navigation and shell are implemented in `src/components/layouts/sticky-nav.tsx`
+and `src/components/layouts/public-shell.tsx`:
+- Sticky top navigation with subtle border and shadow transition when scrolled (`useSyncExternalStore`).
+- Zero Cumulative Layout Shift (CLS) during auth hydration.
+- Signed-out state renders a Sonder-inspired "Sign in" pill button that opens a boutique modal (`SignInModal`).
+- Signed-in state renders the user avatar, name, and a dropdown menu with "My Bookings" and "Sign out".
+- Business roles (USER/MANAGER/ADMIN) are intentionally not displayed from the auth identity layer.
+- Development mode includes a quick toggle button to test both signed-in and signed-out states.
+
 ## Next work
 
-Stage 1 adds Clerk and API-backed user roles. Inventory and booking modes follow
-their own backend contracts. Add photography when real property content exists;
-the initial page deliberately describes that rooms are not available yet.
+Stage UI-2 / UI-3: Property & Room Presentation (Hero gallery, Room cards, 3 Stay Modes: Fixed Slot, Custom Time, Overnight).
+Backend integration and Clerk provider keys will replace the mock auth provider seamlessly.
+
 
 ## Bootstrap verification
 

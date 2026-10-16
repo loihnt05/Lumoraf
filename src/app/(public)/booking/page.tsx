@@ -1,61 +1,157 @@
-import type { Metadata } from "next";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { HealthStatus } from "@/components/health-status";
+"use client";
 
-export const metadata: Metadata = { title: "Find your pause" };
+import * as React from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { MOCK_PROPERTIES, MOCK_PHYSICAL_ROOMS } from "@/lib/mock/inventory-data";
+import type { Property, PhysicalRoom } from "@/lib/types/inventory";
+import { PropertyHeader } from "@/components/property/property-header";
+import { PropertyGallery } from "@/components/property/property-gallery";
+import { RoomCard } from "@/components/room/room-card";
+import { RoomBookingPanel } from "@/components/room/room-booking-panel";
+import { HealthStatus } from "@/components/health-status";
+import { BedSingle } from "lucide-react";
 
 export default function BookingPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Selected property state (defaults to Lumora Đà Lạt)
+  const [selectedProperty, setSelectedProperty] = React.useState<Property>(
+    MOCK_PROPERTIES[0],
+  );
+
+  // Local selected room id for instant UI responsiveness
+  const [localRoomId, setLocalRoomId] = React.useState<string | null>(null);
+
+  // Filter physical rooms belonging to the selected property
+  const propertyRooms = React.useMemo(() => {
+    return MOCK_PHYSICAL_ROOMS.filter(
+      (room) => room.propertyId === selectedProperty.id && room.status === "ACTIVE",
+    );
+  }, [selectedProperty.id]);
+
+  // Derived active room: reads from URL ?room= or local selection
+  const roomParam = searchParams.get("room");
+  const activeRoomId = roomParam ?? localRoomId;
+
+  const selectedRoom = React.useMemo(() => {
+    if (!activeRoomId) return null;
+    return propertyRooms.find((r) => r.id === activeRoomId) ?? null;
+  }, [activeRoomId, propertyRooms]);
+
+  const handleSelectRoom = (room: PhysicalRoom) => {
+    if (room.isBlocked) return;
+    setLocalRoomId(room.id);
+    const newParams = new URLSearchParams(searchParams.toString());
+    newParams.set("room", room.id);
+    router.replace(`/booking?${newParams.toString()}`, { scroll: false });
+  };
+
+  const handleClosePanel = () => {
+    setLocalRoomId(null);
+    const newParams = new URLSearchParams(searchParams.toString());
+    newParams.delete("room");
+    router.replace(`/booking?${newParams.toString()}`, { scroll: false });
+  };
+
+  const handleSelectProperty = (property: Property) => {
+    setSelectedProperty(property);
+    setLocalRoomId(null);
+    const newParams = new URLSearchParams(searchParams.toString());
+    newParams.delete("room");
+    router.replace(`/booking?${newParams.toString()}`, { scroll: false });
+  };
+
+  const availableRoomsCount = propertyRooms.filter((r) => !r.isBlocked).length;
+
   return (
-    <div className="space-y-12 md:space-y-20">
-      <section
-        className="grid items-end gap-10 md:grid-cols-[1.5fr_1fr] md:gap-20"
-        aria-labelledby="booking-title"
-      >
-        <div>
-          <Badge className="mb-8">Thoughtful stays. Coming soon.</Badge>
-          <h1 id="booking-title" className="text-display max-w-3xl">
-            Find your
-            <br />
-            <em className="font-normal text-primary">little pause.</em>
-          </h1>
+    <div className="space-y-12 md:space-y-16">
+      {/* 1. Property Header & Location Context (UI-2.1) */}
+      <section aria-label="Thông tin chi nhánh homestay">
+        <PropertyHeader
+          properties={MOCK_PROPERTIES}
+          selectedProperty={selectedProperty}
+          onSelectProperty={handleSelectProperty}
+          hasSelectedRoom={Boolean(selectedRoom)}
+        />
+      </section>
+
+      {/* 2. Sonder-inspired Hero Photography Gallery (UI-2.1) */}
+      <section aria-label="Thư viện ảnh chi nhánh">
+        <PropertyGallery
+          propertyName={selectedProperty.name}
+          images={selectedProperty.images}
+        />
+      </section>
+
+      {/* 3. Physical Rooms Presentation (UI-2.2) */}
+      <section aria-labelledby="rooms-heading" className="space-y-6 pt-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between border-b border-border/60 pb-5">
+          <div>
+            <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-primary">
+              <BedSingle className="h-4 w-4" />
+              <span>Không gian lưu trú</span>
+            </div>
+            <h2 id="rooms-heading" className="text-display text-2xl md:text-3xl font-medium tracking-tight text-foreground mt-1">
+              Danh sách phòng tại {selectedProperty.name}
+            </h2>
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            Hiển thị <strong>{propertyRooms.length}</strong> phòng vật lý (<strong>{availableRoomsCount}</strong> sẵn sàng đặt)
+          </p>
         </div>
-        <div className="pb-2">
-          <p className="text-body max-w-sm text-muted-foreground">
-            A few quiet hours. A night away. A place that feels like yours.
-          </p>
-          <p className="mt-5 text-sm leading-6 text-muted-foreground">
-            We’re preparing our collection of homestays. Room selection and
-            reservations will be available here soon.
-          </p>
+
+        {/* Room Cards Grid */}
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {propertyRooms.map((room) => (
+            <RoomCard
+              key={room.id}
+              room={room}
+              isSelected={selectedRoom?.id === room.id}
+              onSelect={handleSelectRoom}
+            />
+          ))}
         </div>
       </section>
+
+      {/* 4. Sonder-style Editorial Quality Banner */}
       <section
-        aria-labelledby="coming-title"
-        className="rounded-xl bg-primary px-7 py-10 text-primary-foreground md:px-12 md:py-14"
+        aria-label="Triết lý nghỉ dưỡng Lumora"
+        className="rounded-3xl bg-surface border border-border/70 p-8 md:p-12 shadow-xs"
       >
-        <p className="text-caption mb-5 uppercase tracking-[0.18em]">
-          Space for your kind of stay
-        </p>
-        <h2 id="coming-title" className="text-heading max-w-xl">
-          Less rush.
-          <br />
-          More room to just be.
-        </h2>
-        <p className="mt-6 max-w-lg text-sm leading-7 opacity-85">
-          Discover a room, choose your time, and settle in. We’re starting with
-          the essentials to make every stay feel effortless.
-        </p>
+        <div className="grid gap-8 md:grid-cols-3">
+          <div className="space-y-2">
+            <span className="text-caption uppercase tracking-[0.2em] text-primary">01 / Linh hoạt</span>
+            <h3 className="text-lg font-medium text-foreground">3 hình thức lưu trú</h3>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Slot 3h tiết kiệm, Custom time tự chọn từng mốc 30 phút, hoặc nghỉ qua đêm với trải nghiệm trọn vẹn.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <span className="text-caption uppercase tracking-[0.2em] text-primary">02 / Minh bạch</span>
+            <h3 className="text-lg font-medium text-foreground">Không phí ẩn</h3>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Toàn bộ giá phòng và phụ phí đêm (23:00 - 06:00) được tính toán chính xác và hiển thị chi tiết trước khi xác nhận.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <span className="text-caption uppercase tracking-[0.2em] text-primary">03 / Tự do</span>
+            <h3 className="text-lg font-medium text-foreground">Không gian tĩnh tại</h3>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Mỗi căn phòng là một không gian riêng tư được chăm chút tỉ mỉ từ ánh sáng, mùi hương đến nội thất gỗ tự nhiên.
+            </p>
+          </div>
+        </div>
       </section>
-      <section aria-label="Booking availability">
-        <Card className="border border-border/60 bg-transparent shadow-none">
-          <h2 className="text-lg font-medium">Our doors will open soon</h2>
-          <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">
-            There are no rooms to book yet. Check back as we prepare our first
-            spaces.
-          </p>
-        </Card>
-      </section>
+
+      {/* 5. Expandable Booking Workspace Panel (UI-2.3) */}
+      <RoomBookingPanel
+        room={selectedRoom}
+        onClose={handleClosePanel}
+      />
+
+      {/* Development Backend Connection Status */}
       {process.env.NODE_ENV === "development" && <HealthStatus />}
     </div>
   );
