@@ -175,7 +175,7 @@ export function BookingModeTabs({
         id={`panel-${currentModeInfo.id}`}
         role="tabpanel"
         aria-labelledby={`tab-${currentModeInfo.id}`}
-        className="rounded-xl border border-border/60 bg-muted/30 p-3.5 text-xs leading-relaxed text-muted-foreground animate-in fade-in-50 duration-200"
+        className="rounded-xl border border-border/60 bg-muted/30 p-2.5 text-[11px] leading-relaxed text-muted-foreground animate-in fade-in-50 duration-200"
       >
         <p>{currentModeInfo.description}</p>
       </div>

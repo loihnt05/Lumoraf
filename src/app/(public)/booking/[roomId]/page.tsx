@@ -309,9 +309,9 @@ export default function RoomDetailPage() {
       </section>
 
       {/* 4. Two-Column Layout (Desktop) */}
-      <div className="grid gap-12 lg:grid-cols-[1.55fr_1fr] lg:gap-16 items-start">
+      <div className="grid gap-10 lg:grid-cols-[1.45fr_1fr] lg:gap-14 items-start min-w-0">
         {/* Left Column: Room Presentation */}
-        <div className="space-y-10">
+        <div className="space-y-10 min-w-0">
           {/* Room Specs Highlights */}
           <div className="grid grid-cols-3 gap-4 rounded-2xl bg-surface border border-border/70 p-5 md:p-6 shadow-xs text-center">
             <div className="space-y-1">
@@ -400,178 +400,185 @@ export default function RoomDetailPage() {
         </div>
 
         {/* Right Column: Sticky Sonder-style Booking Workspace Card */}
-        <aside className="sticky top-28 space-y-6">
-          <div className="rounded-3xl border border-border/80 bg-surface p-6 md:p-7 shadow-xl shadow-black/5 space-y-6">
-            {/* Price Header */}
-            <div className="flex items-baseline justify-between border-b border-border/60 pb-5">
-              <div>
-                <span className="text-xs text-muted-foreground">
-                  {selectedSlot || customSelection || overnightStay ? "Tổng tiền ước tính" : "Bắt đầu từ"}
-                </span>
-                <p className="text-price text-2xl font-bold text-foreground">
-                  {displayPrice}₫
-                  <span className="text-xs font-normal text-muted-foreground">
-                    {priceUnitLabel}
+        <aside className="lg:sticky lg:top-24 min-w-0 w-full">
+          <div className="rounded-3xl border border-border/80 bg-surface shadow-xl shadow-black/5 flex flex-col max-h-[calc(100vh-7rem)] overflow-hidden">
+            {/* 1. Fixed Card Header: Price & Transparency Badge */}
+            <div className="p-5 sm:p-6 pb-4 border-b border-border/60 shrink-0 bg-surface">
+              <div className="flex items-baseline justify-between">
+                <div>
+                  <span className="text-xs text-muted-foreground">
+                    {selectedSlot || customSelection || overnightStay ? "Tổng tiền ước tính" : "Bắt đầu từ"}
                   </span>
-                </p>
-              </div>
+                  <p className="text-price text-2xl font-bold text-foreground">
+                    {displayPrice}₫
+                    <span className="text-xs font-normal text-muted-foreground">
+                      {priceUnitLabel}
+                    </span>
+                  </p>
+                </div>
 
-              <div className="flex items-center gap-1.5 text-xs text-primary font-medium">
-                <ShieldCheck className="h-4 w-4" />
-                <span>Giá minh bạch</span>
+                <div className="flex items-center gap-1.5 text-xs text-primary font-medium">
+                  <ShieldCheck className="h-4 w-4" />
+                  <span>Giá minh bạch</span>
+                </div>
               </div>
             </div>
 
-            {/* Blocked Room Warning */}
-            {room.isBlocked ? (
-              <div className="rounded-2xl border border-red-200 bg-red-50 p-5 space-y-2 text-center text-red-700">
-                <Ban className="h-6 w-6 mx-auto text-red-600" />
-                <p className="text-sm font-semibold">Phòng đang tạm khóa</p>
-                <p className="text-xs leading-relaxed text-red-600">
-                  Phòng này đang trong lịch bảo dưỡng định kỳ và tạm thời không thể tiếp nhận lượt đặt mới. Vui lòng chọn một phòng khác.
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => router.push("/booking")}
-                  className="mt-3 rounded-full border-red-300 text-red-700 hover:bg-red-100"
-                >
-                  Chọn phòng khác
-                </Button>
-              </div>
-            ) : (
-              <>
-                {/* STAGE UI-3: Booking Mode Selector Tabs */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Hình thức lưu trú
-                    </label>
-                    <span className="text-[11px] text-muted-foreground">Tùy chọn</span>
+            {/* 2. Scrollable Middle Body: Selections & Config */}
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 py-4 space-y-5">
+              {/* Blocked Room Warning */}
+              {room.isBlocked ? (
+                <div className="rounded-2xl border border-red-200 bg-red-50 p-5 space-y-2 text-center text-red-700">
+                  <Ban className="h-6 w-6 mx-auto text-red-600" />
+                  <p className="text-sm font-semibold">Phòng đang tạm khóa</p>
+                  <p className="text-xs leading-relaxed text-red-600">
+                    Phòng này đang trong lịch bảo dưỡng định kỳ và tạm thời không thể tiếp nhận lượt đặt mới. Vui lòng chọn một phòng khác.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.push("/booking")}
+                    className="mt-3 rounded-full border-red-300 text-red-700 hover:bg-red-100"
+                  >
+                    Chọn phòng khác
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  {/* STAGE UI-3: Booking Mode Selector Tabs */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Hình thức lưu trú
+                      </label>
+                      <span className="text-[11px] text-muted-foreground">Tùy chọn</span>
+                    </div>
+
+                    {isLoadingConfig ? (
+                      <div className="space-y-2">
+                        <Skeleton className="h-12 w-full rounded-full" />
+                        <Skeleton className="h-14 w-full rounded-xl" />
+                      </div>
+                    ) : config ? (
+                      <BookingModeTabs
+                        roomId={room.id}
+                        config={config}
+                        activeMode={activeMode}
+                        onChangeMode={handleModeChange}
+                      />
+                    ) : (
+                      <div className="rounded-xl border border-border p-3 text-xs text-muted-foreground">
+                        Không tải được cấu hình.
+                      </div>
+                    )}
                   </div>
 
-                  {isLoadingConfig ? (
-                    <div className="space-y-2">
-                      <Skeleton className="h-12 w-full rounded-full" />
-                      <Skeleton className="h-14 w-full rounded-xl" />
-                    </div>
-                  ) : config ? (
-                    <BookingModeTabs
-                      roomId={room.id}
-                      config={config}
-                      activeMode={activeMode}
-                      onChangeMode={handleModeChange}
-                    />
-                  ) : (
-                    <div className="rounded-xl border border-border p-3 text-xs text-muted-foreground">
-                      Không tải được cấu hình.
+                  {/* STAGE UI-4: FIXED SLOT EXPERIENCE (When activeMode === 'FIXED') */}
+                  {activeMode === "FIXED" && (
+                    <div className="space-y-4 pt-1 border-t border-border/60">
+                      <DateSelector
+                        selectedDate={selectedDate}
+                        onSelectDate={handleSelectDate}
+                      />
+
+                      <FixedSlotPicker
+                        slots={fixedSlots}
+                        selectedSlotId={selectedSlot?.id ?? null}
+                        onSelectSlot={handleSelectSlot}
+                        isLoading={isLoadingSlots}
+                        onRefresh={handleRefreshSlots}
+                        errorMessage={slotsError}
+                      />
                     </div>
                   )}
-                </div>
 
-                {/* STAGE UI-4: FIXED SLOT EXPERIENCE (When activeMode === 'FIXED') */}
-                {activeMode === "FIXED" && (
-                  <div className="space-y-5 pt-1 border-t border-border/60">
-                    <DateSelector
-                      selectedDate={selectedDate}
-                      onSelectDate={handleSelectDate}
-                    />
+                  {/* STAGE UI-5: CUSTOM TIME EXPERIENCE (When activeMode === 'CUSTOM') */}
+                  {activeMode === "CUSTOM" && (
+                    <div className="space-y-4 pt-1 border-t border-border/60">
+                      <DateSelector
+                        selectedDate={selectedDate}
+                        onSelectDate={handleSelectDate}
+                      />
 
-                    <FixedSlotPicker
-                      slots={fixedSlots}
-                      selectedSlotId={selectedSlot?.id ?? null}
-                      onSelectSlot={handleSelectSlot}
-                      isLoading={isLoadingSlots}
-                      onRefresh={handleRefreshSlots}
-                      errorMessage={slotsError}
-                    />
-                  </div>
-                )}
+                      <CustomTimePicker
+                        date={selectedDate}
+                        unavailableRanges={unavailableRanges}
+                        basePrice={room.roomType?.basePrice}
+                        onSelectionChange={setCustomSelection}
+                      />
+                    </div>
+                  )}
 
-                {/* STAGE UI-5: CUSTOM TIME EXPERIENCE (When activeMode === 'CUSTOM') */}
-                {activeMode === "CUSTOM" && (
-                  <div className="space-y-5 pt-1 border-t border-border/60">
-                    <DateSelector
-                      selectedDate={selectedDate}
-                      onSelectDate={handleSelectDate}
-                    />
+                  {/* STAGE UI-6: OVERNIGHT EXPERIENCE (When activeMode === 'OVERNIGHT') */}
+                  {activeMode === "OVERNIGHT" && (
+                    <div className="space-y-4 pt-1 border-t border-border/60">
+                      <OvernightPicker
+                        roomId={roomId}
+                        overnightBasePrice={room.roomType ? Math.round(room.roomType.basePrice * 2.8) : 850000}
+                        onQuoteChange={setOvernightStay}
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
 
-                    <CustomTimePicker
-                      date={selectedDate}
-                      unavailableRanges={unavailableRanges}
-                      basePrice={room.roomType?.basePrice}
-                      onSelectionChange={setCustomSelection}
-                    />
-                  </div>
-                )}
+            {/* 3. Fixed Bottom Action Area (Always visible on screen!) */}
+            {!room.isBlocked && (
+              <div className="p-5 sm:p-6 pt-3 border-t border-border/60 shrink-0 bg-surface space-y-2">
+                <Button
+                  size="lg"
+                  disabled={isReserveDisabled}
+                  onClick={() => {
+                    if (!isAuthenticated) {
+                      openSignInModal();
+                    } else if (activeMode === "FIXED" && selectedSlot) {
+                      alert(
+                        `Đặt phòng thành công (Mô phỏng Fixed Slot)!\nPhòng: ${room.name}\nNgày: ${selectedDate}\nKhung giờ: ${selectedSlot.startTime} - ${selectedSlot.endTime}\nGiá: ${displayPrice}₫`,
+                      );
+                    } else if (activeMode === "CUSTOM" && customSelection) {
+                      alert(
+                        `Đặt phòng thành công (Mô phỏng Custom Time)!\nPhòng: ${room.name}\nNgày bắt đầu: ${customSelection.startDate}\nGiờ nhận: ${customSelection.startTime}\nGiờ trả: ${customSelection.endTime} (${customSelection.endDate})\nThời lượng: ${customSelection.durationMinutes / 60}h\nGiá: ${displayPrice}₫`,
+                      );
+                    } else if (activeMode === "OVERNIGHT" && overnightStay) {
+                      alert(
+                        `Đặt phòng thành công (Mô phỏng Overnight)!\nPhòng: ${room.name}\nNhận phòng: ${overnightStay.checkInDate} (từ 14:00)\nTrả phòng: ${overnightStay.checkOutDate} (trước 11:00)\nSố đêm: ${overnightStay.numberOfNights} đêm\nTổng giá: ${displayPrice}₫`,
+                      );
+                    }
+                  }}
+                  className="w-full justify-center rounded-full text-base font-medium shadow-md"
+                >
+                  {!isAuthenticated ? (
+                    <>
+                      <Lock className="mr-2 h-4 w-4" />
+                      <span>Sign in to Reserve</span>
+                    </>
+                  ) : activeMode === "FIXED" && !selectedSlot ? (
+                    "Vui lòng chọn 1 khung giờ"
+                  ) : activeMode === "CUSTOM" && !customSelection ? (
+                    "Vui lòng chọn giờ hợp lệ (min 3h)"
+                  ) : activeMode === "OVERNIGHT" && !overnightStay ? (
+                    "Vui lòng chọn ngày nhận & trả phòng"
+                  ) : (
+                    <>
+                      <span>
+                        {activeMode === "FIXED" && selectedSlot
+                          ? `Đặt slot ${selectedSlot.startTime}–${selectedSlot.endTime}`
+                          : activeMode === "CUSTOM" && customSelection
+                          ? `Đặt ${customSelection.startTime}–${customSelection.endTime}`
+                          : activeMode === "OVERNIGHT" && overnightStay
+                          ? `Đặt ${overnightStay.numberOfNights} đêm (${overnightStay.checkInDate} → ${overnightStay.checkOutDate})`
+                          : "Tiếp tục đặt phòng"}
+                      </span>
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </>
+                  )}
+                </Button>
 
-                {/* STAGE UI-6: OVERNIGHT EXPERIENCE (When activeMode === 'OVERNIGHT') */}
-                {activeMode === "OVERNIGHT" && (
-                  <div className="space-y-5 pt-1 border-t border-border/60">
-                    <OvernightPicker
-                      roomId={roomId}
-                      overnightBasePrice={room.roomType ? Math.round(room.roomType.basePrice * 2.8) : 850000}
-                      onQuoteChange={setOvernightStay}
-                    />
-                  </div>
-                )}
-
-                {/* Reserve Action Button */}
-                <div className="space-y-3 pt-2">
-                  <Button
-                    size="lg"
-                    disabled={isReserveDisabled}
-                    onClick={() => {
-                      if (!isAuthenticated) {
-                        openSignInModal();
-                      } else if (activeMode === "FIXED" && selectedSlot) {
-                        alert(
-                          `Đặt phòng thành công (Mô phỏng Fixed Slot)!\nPhòng: ${room.name}\nNgày: ${selectedDate}\nKhung giờ: ${selectedSlot.startTime} - ${selectedSlot.endTime}\nGiá: ${displayPrice}₫`,
-                        );
-                      } else if (activeMode === "CUSTOM" && customSelection) {
-                        alert(
-                          `Đặt phòng thành công (Mô phỏng Custom Time)!\nPhòng: ${room.name}\nNgày bắt đầu: ${customSelection.startDate}\nGiờ nhận: ${customSelection.startTime}\nGiờ trả: ${customSelection.endTime} (${customSelection.endDate})\nThời lượng: ${customSelection.durationMinutes / 60}h\nGiá: ${displayPrice}₫`,
-                        );
-                      } else if (activeMode === "OVERNIGHT" && overnightStay) {
-                        alert(
-                          `Đặt phòng thành công (Mô phỏng Overnight)!\nPhòng: ${room.name}\nNhận phòng: ${overnightStay.checkInDate} (từ 14:00)\nTrả phòng: ${overnightStay.checkOutDate} (trước 11:00)\nSố đêm: ${overnightStay.numberOfNights} đêm\nTổng giá: ${displayPrice}₫`,
-                        );
-                      }
-                    }}
-                    className="w-full justify-center rounded-full text-base font-medium shadow-md"
-                  >
-                    {!isAuthenticated ? (
-                      <>
-                        <Lock className="mr-2 h-4 w-4" />
-                        <span>Sign in to Reserve</span>
-                      </>
-                    ) : activeMode === "FIXED" && !selectedSlot ? (
-                      "Vui lòng chọn 1 khung giờ"
-                    ) : activeMode === "CUSTOM" && !customSelection ? (
-                      "Vui lòng chọn giờ hợp lệ (min 3h)"
-                    ) : activeMode === "OVERNIGHT" && !overnightStay ? (
-                      "Vui lòng chọn ngày nhận & trả phòng"
-                    ) : (
-                      <>
-                        <span>
-                          {activeMode === "FIXED" && selectedSlot
-                            ? `Đặt slot ${selectedSlot.startTime}–${selectedSlot.endTime}`
-                            : activeMode === "CUSTOM" && customSelection
-                            ? `Đặt ${customSelection.startTime}–${customSelection.endTime}`
-                            : activeMode === "OVERNIGHT" && overnightStay
-                            ? `Đặt ${overnightStay.numberOfNights} đêm (${overnightStay.checkInDate} → ${overnightStay.checkOutDate})`
-                            : "Tiếp tục đặt phòng"}
-                        </span>
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </>
-                    )}
-                  </Button>
-
-                  <p className="text-center text-[11px] text-muted-foreground">
-                    Chưa trừ tiền ngay. Giữ phòng trong 15 phút để hoàn tất thanh toán.
-                  </p>
-                </div>
-              </>
+                <p className="text-center text-[11px] text-muted-foreground">
+                  Chưa trừ tiền ngay. Giữ phòng trong 15 phút để hoàn tất thanh toán.
+                </p>
+              </div>
             )}
           </div>
         </aside>

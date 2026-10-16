@@ -96,7 +96,7 @@ export function FixedSlotPicker({
       <div
         role="radiogroup"
         aria-label="Danh sách khung giờ 3h"
-        className="grid gap-2.5"
+        className="grid gap-2 max-h-60 overflow-y-auto pr-1"
       >
         {slots.map((slot) => {
           const isSelected = slot.id === selectedSlotId;
@@ -120,7 +120,7 @@ export function FixedSlotPicker({
                 }
               }}
               className={cn(
-                "group relative flex items-center justify-between rounded-2xl border p-4 text-left transition-all duration-200 outline-none",
+                "group relative flex items-center justify-between rounded-xl border p-3 text-left transition-all duration-200 outline-none",
                 isDisabled
                   ? "border-border/40 bg-muted/30 opacity-60 cursor-not-allowed text-muted-foreground"
                   : isSelected
@@ -129,38 +129,34 @@ export function FixedSlotPicker({
               )}
             >
               {/* Left Info: Start-End time & Duration */}
-              <div className="space-y-1">
-                <div className="flex items-center gap-2.5">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
                   <span
                     className={cn(
-                      "text-base font-bold tabular-nums tracking-tight",
+                      "text-sm sm:text-base font-bold tabular-nums tracking-tight",
                       isSelected ? "text-primary" : isDisabled ? "text-muted-foreground" : "text-foreground",
                     )}
                   >
                     {slot.startTime} – {slot.endTime}
                   </span>
 
-                  <span className="text-[11px] rounded-full bg-muted/80 px-2.5 py-0.5 text-muted-foreground font-medium">
+                  <span className="text-[10px] rounded-full bg-muted/80 px-2 py-0.5 text-muted-foreground font-medium">
                     {slot.durationMinutes / 60}h
                   </span>
 
                   {slot.isNightWindow && (
-                    <Badge className="bg-amber-100 text-amber-800 border-none text-[10px] font-medium flex items-center gap-1 py-0.5">
-                      <Moon className="h-3 w-3" />
+                    <Badge className="bg-amber-100 text-amber-800 border-none text-[9px] font-medium flex items-center gap-1 py-0 px-1.5">
+                      <Moon className="h-2.5 w-2.5" />
                       <span>Đêm +20%</span>
                     </Badge>
                   )}
                 </div>
 
-                <p className="text-[11px] text-muted-foreground">
-                  {isBooked ? (
-                    <span className="text-red-600 font-medium">Đã có khách đặt</span>
-                  ) : slot.surchargeNote ? (
-                    slot.surchargeNote
-                  ) : (
-                    "Khung giờ định sẵn · 30m dọn phòng sau giờ trả"
-                  )}
-                </p>
+                {isBooked ? (
+                  <p className="text-[10px] text-red-600 font-medium">Đã có khách đặt</p>
+                ) : slot.surchargeNote ? (
+                  <p className="text-[10px] text-amber-700 font-medium">{slot.surchargeNote}</p>
+                ) : null}
               </div>
 
               {/* Right Info: Price and Checkbox/State indicator */}
