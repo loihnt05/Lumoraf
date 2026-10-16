@@ -99,7 +99,7 @@ export function DateSelector({ selectedDate, onSelectDate }: DateSelectorProps) 
         ref={scrollContainerRef}
         role="radiogroup"
         aria-label="Danh sách ngày lưu trú"
-        className="flex gap-2 overflow-x-auto pb-1 scrollbar-none snap-x"
+        className="flex gap-2 overflow-x-auto pb-1 snap-x scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
       >
         {days.map((item) => {
           const isSelected = item.dateStr === selectedDate;

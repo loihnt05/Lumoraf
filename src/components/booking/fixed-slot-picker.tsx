@@ -96,7 +96,7 @@ export function FixedSlotPicker({
       <div
         role="radiogroup"
         aria-label="Danh sách khung giờ 3h"
-        className="grid gap-2 max-h-60 overflow-y-auto pr-1"
+        className="grid gap-2.5"
       >
         {slots.map((slot) => {
           const isSelected = slot.id === selectedSlotId;
