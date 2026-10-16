@@ -80,9 +80,39 @@ and `src/components/layouts/public-shell.tsx`:
   - Availability refresh capability (`handleRefreshSlots`) on date change or manual refresh trigger.
   - Dynamic slot price calculation and reserve CTA updating to selected slot range.
 
+## Stage UI-5 — Custom Time Experience
+
+- Custom time controls (`CustomTimePicker` in `src/components/booking/custom-time-picker.tsx`):
+  - Strictly 30-minute steps (`:00`, `:30`).
+  - Enforced minimum duration: 180 minutes (3 hours) with realtime duration feedback.
+  - Cross-midnight selection support with explicit `+1 ngày (Hôm sau)` indicators.
+  - Night window surcharge calculation (+20% on hours between 23:00 and 06:00).
+- Availability timeline (`AvailabilityTimeline` in `src/components/booking/availability-timeline.tsx`):
+  - 18h visual bar (06:00 to 24:00) with 2h ticks.
+  - Displays booked + cleaning turnover gaps as generic "Đã bận / Không khả dụng".
+  - Overlays customer's custom selection in realtime with conflict pulse animation.
+  - Screen reader accessible list of unavailable intervals.
+- Conflict-aware validation:
+  - Overlap check prevents choosing windows intersecting unavailable ranges.
+  - Boundary check: `end == unavailable.start` valid because cleaning buffer is already factored in.
+  - Reserve action is disabled until the range is completely valid and conflict-free.
+
+## Stage UI-6 — Overnight Experience
+
+- Multi-night date range picker (`OvernightPicker` in `src/components/booking/overnight-picker.tsx`):
+  - Check-in date input with 14:00 time preset.
+  - Check-out date input with 11:00 time preset.
+  - Quick stay duration pills ("1 đêm", "2 đêm", "3 đêm", "5 đêm", "1 tuần").
+  - Cleaning buffer (60m) handled automatically by backend availability without requiring guest input.
+- Separate overnight pricing model (UI-6.2):
+  - Does NOT use custom hourly pricing to compute overnight stays.
+  - Itemized quote breakdown: `pricePerNight × numberOfNights`, standard cleaning included, automated room access code.
+  - Realtime validation ensures `checkOut > checkIn` and guards against occupied nights.
+
 ## Next work
 
-Stage UI-5: Custom Time Experience (30-minute step, minimum 3 hours, availability timeline, cross-midnight support).
+Milestone M4: Stage UI-7 (Authoritative quote, summary panel, cancellation policy) & Stage UI-8 (Reserve action, pending booking screen, mock payment handoff).
+
 
 
 

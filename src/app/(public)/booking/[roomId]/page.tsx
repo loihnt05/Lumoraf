@@ -7,11 +7,16 @@ import { MOCK_PHYSICAL_ROOMS, MOCK_PROPERTIES } from "@/lib/mock/inventory-data"
 import { DEFAULT_BOOKING_CONFIG } from "@/lib/types/booking-config";
 import type { BookingMode, RoomTypeBookingConfig } from "@/lib/types/booking-config";
 import type { FixedSlot } from "@/lib/types/slot";
+import type { UnavailableRange, CustomTimeSelection } from "@/lib/types/custom-time";
+import type { OvernightStay } from "@/lib/types/overnight";
 import { getRoomTypeBookingConfig } from "@/lib/api/booking-config";
 import { getFixedSlotsAvailability } from "@/lib/api/availability";
+import { getUnavailableRanges } from "@/lib/api/custom-availability";
 import { BookingModeTabs } from "@/components/booking/booking-mode-tabs";
 import { DateSelector } from "@/components/booking/date-selector";
 import { FixedSlotPicker } from "@/components/booking/fixed-slot-picker";
+import { CustomTimePicker } from "@/components/booking/custom-time-picker";
+import { OvernightPicker } from "@/components/booking/overnight-picker";
 import { PropertyGallery } from "@/components/property/property-gallery";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,7 +35,6 @@ import {
   Ban,
   Lock,
   ArrowRight,
-  Sparkles,
 } from "lucide-react";
 
 function getTodayString(): string {
@@ -62,12 +66,21 @@ export default function RoomDetailPage() {
   const [config, setConfig] = React.useState<RoomTypeBookingConfig | null>(null);
   const [isLoadingConfig, setIsLoadingConfig] = React.useState(true);
 
-  // STAGE UI-4: Fixed slot selection & availability state
+  // Common selected date for both Fixed & Custom
   const [selectedDate, setSelectedDate] = React.useState<string>(getTodayString);
+
+  // STAGE UI-4: Fixed slot selection & availability state
   const [selectedSlot, setSelectedSlot] = React.useState<FixedSlot | null>(null);
   const [fixedSlots, setFixedSlots] = React.useState<FixedSlot[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = React.useState(true);
   const [slotsError, setSlotsError] = React.useState<string | null>(null);
+
+  // STAGE UI-5: Custom time selection & unavailable ranges state
+  const [unavailableRanges, setUnavailableRanges] = React.useState<UnavailableRange[]>([]);
+  const [customSelection, setCustomSelection] = React.useState<CustomTimeSelection | null>(null);
+
+  // STAGE UI-6: Overnight stay state
+  const [overnightStay, setOvernightStay] = React.useState<OvernightStay | null>(null);
 
   const roomTypeId = room?.roomTypeId;
 
@@ -127,6 +140,30 @@ export default function RoomDetailPage() {
     };
   }, [roomId, selectedDate]);
 
+  // Fetch Unavailable Ranges for Custom Time (UI-5.2 & UI-5.3)
+  React.useEffect(() => {
+    if (!roomId) return;
+
+    let isSubscribed = true;
+
+    async function loadUnavailable() {
+      try {
+        const ranges = await getUnavailableRanges(roomId, selectedDate);
+        if (isSubscribed) {
+          setUnavailableRanges(ranges);
+        }
+      } catch {
+        // Fallback gracefully
+      }
+    }
+
+    void loadUnavailable();
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [roomId, selectedDate]);
+
   const handleRefreshSlots = React.useCallback(async () => {
     if (!roomId) return;
     setIsLoadingSlots(true);
@@ -141,10 +178,11 @@ export default function RoomDetailPage() {
     }
   }, [roomId, selectedDate]);
 
-  // UI-4.1: Changing date cancels/resets previous slot selection
+  // UI-4.1 & UI-5.1: Changing date cancels/resets previous selections
   const handleSelectDate = (newDate: string) => {
     setSelectedDate(newDate);
     setSelectedSlot(null);
+    setCustomSelection(null);
     setIsLoadingSlots(true);
   };
 
@@ -154,8 +192,10 @@ export default function RoomDetailPage() {
 
   const handleModeChange = (newMode: BookingMode) => {
     setActiveMode(newMode);
-    // UI-3.1 & UI-4.1: Reset incompatible transient selections when changing mode
+    // UI-3.1: Reset incompatible transient selections when changing mode
     setSelectedSlot(null);
+    setCustomSelection(null);
+    setOvernightStay(null);
   };
 
   // Handle missing room (404 state)
@@ -177,20 +217,43 @@ export default function RoomDetailPage() {
     );
   }
 
-  // Price calculations
-  const displayPrice = selectedSlot
-    ? new Intl.NumberFormat("vi-VN").format(selectedSlot.price)
-    : room.roomType
+  // Price calculations based on mode
+  let displayPrice = room.roomType
     ? new Intl.NumberFormat("vi-VN").format(room.roomType.basePrice)
     : "299.000";
+  let priceUnitLabel = " / slot 3h";
 
-  const priceUnitLabel = selectedSlot
-    ? ` (Slot ${selectedSlot.startTime}–${selectedSlot.endTime})`
-    : activeMode === "OVERNIGHT"
-    ? " / đêm"
-    : activeMode === "CUSTOM"
-    ? " / 3h (tính theo giờ)"
-    : " / slot 3h";
+  if (activeMode === "FIXED") {
+    if (selectedSlot) {
+      displayPrice = new Intl.NumberFormat("vi-VN").format(selectedSlot.price);
+      priceUnitLabel = ` (Slot ${selectedSlot.startTime}–${selectedSlot.endTime})`;
+    } else {
+      priceUnitLabel = " / slot 3h";
+    }
+  } else if (activeMode === "CUSTOM") {
+    if (customSelection) {
+      displayPrice = new Intl.NumberFormat("vi-VN").format(customSelection.estimatedPrice);
+      priceUnitLabel = ` (${customSelection.startTime} – ${customSelection.endTime})`;
+    } else {
+      priceUnitLabel = " / 3h (tính theo giờ)";
+    }
+  } else if (activeMode === "OVERNIGHT") {
+    if (overnightStay && overnightStay.isValid) {
+      displayPrice = new Intl.NumberFormat("vi-VN").format(overnightStay.total);
+      priceUnitLabel = ` (${overnightStay.numberOfNights} đêm)`;
+    } else {
+      const overnightBase = room.roomType ? Math.round(room.roomType.basePrice * 2.8) : 850000;
+      displayPrice = new Intl.NumberFormat("vi-VN").format(overnightBase);
+      priceUnitLabel = " / đêm";
+    }
+  }
+
+  // Reserve button validation status
+  const isReserveDisabled =
+    isLoadingConfig ||
+    (activeMode === "FIXED" && !selectedSlot) ||
+    (activeMode === "CUSTOM" && !customSelection) ||
+    (activeMode === "OVERNIGHT" && (!overnightStay || !overnightStay.isValid || !overnightStay.isAvailable));
 
   return (
     <div className="space-y-10 md:space-y-14">
@@ -329,7 +392,7 @@ export default function RoomDetailPage() {
                   <span>Quy chuẩn vệ sinh & dọn phòng</span>
                 </div>
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  Giữa các lượt khách luôn có 30 phút dọn phòng (cleaning buffer) để đảm bảo không gian sạch sẽ, thơm mát và an toàn.
+                  Giữa các lượt khách luôn có khoảng thời gian dọn phòng (cleaning buffer) để đảm bảo không gian sạch sẽ, thơm mát và an toàn.
                 </p>
               </div>
             </div>
@@ -343,7 +406,7 @@ export default function RoomDetailPage() {
             <div className="flex items-baseline justify-between border-b border-border/60 pb-5">
               <div>
                 <span className="text-xs text-muted-foreground">
-                  {selectedSlot ? "Tổng tiền ước tính" : "Bắt đầu từ"}
+                  {selectedSlot || customSelection || overnightStay ? "Tổng tiền ước tính" : "Bắt đầu từ"}
                 </span>
                 <p className="text-price text-2xl font-bold text-foreground">
                   {displayPrice}₫
@@ -409,13 +472,11 @@ export default function RoomDetailPage() {
                 {/* STAGE UI-4: FIXED SLOT EXPERIENCE (When activeMode === 'FIXED') */}
                 {activeMode === "FIXED" && (
                   <div className="space-y-5 pt-1 border-t border-border/60">
-                    {/* UI-4.1: Date Selector for Fixed Slot */}
                     <DateSelector
                       selectedDate={selectedDate}
                       onSelectDate={handleSelectDate}
                     />
 
-                    {/* UI-4.2 & UI-4.3: Fixed Slot Picker with Availability Refresh */}
                     <FixedSlotPicker
                       slots={fixedSlots}
                       selectedSlotId={selectedSlot?.id ?? null}
@@ -427,29 +488,31 @@ export default function RoomDetailPage() {
                   </div>
                 )}
 
-                {/* Custom Time Placeholder (Preparing for Stage UI-5) */}
+                {/* STAGE UI-5: CUSTOM TIME EXPERIENCE (When activeMode === 'CUSTOM') */}
                 {activeMode === "CUSTOM" && (
-                  <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 text-xs leading-relaxed text-primary space-y-1.5">
-                    <div className="flex items-center gap-1.5 font-medium">
-                      <Sparkles className="h-4 w-4 shrink-0" />
-                      <span>Stage UI-5: Custom Time Experience</span>
-                    </div>
-                    <p className="text-muted-foreground">
-                      Bộ chọn mốc thời gian tự do với bước nhảy 30 phút và tối thiểu 3 giờ sẽ được tích hợp tiếp theo.
-                    </p>
+                  <div className="space-y-5 pt-1 border-t border-border/60">
+                    <DateSelector
+                      selectedDate={selectedDate}
+                      onSelectDate={handleSelectDate}
+                    />
+
+                    <CustomTimePicker
+                      date={selectedDate}
+                      unavailableRanges={unavailableRanges}
+                      basePrice={room.roomType?.basePrice}
+                      onSelectionChange={setCustomSelection}
+                    />
                   </div>
                 )}
 
-                {/* Overnight Placeholder (Preparing for Stage UI-6) */}
+                {/* STAGE UI-6: OVERNIGHT EXPERIENCE (When activeMode === 'OVERNIGHT') */}
                 {activeMode === "OVERNIGHT" && (
-                  <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 text-xs leading-relaxed text-primary space-y-1.5">
-                    <div className="flex items-center gap-1.5 font-medium">
-                      <Sparkles className="h-4 w-4 shrink-0" />
-                      <span>Stage UI-6: Overnight Experience</span>
-                    </div>
-                    <p className="text-muted-foreground">
-                      Lịch chọn ngày check-in / check-out qua đêm với bảng giá riêng sẽ được tích hợp tiếp theo.
-                    </p>
+                  <div className="space-y-5 pt-1 border-t border-border/60">
+                    <OvernightPicker
+                      roomId={roomId}
+                      overnightBasePrice={room.roomType ? Math.round(room.roomType.basePrice * 2.8) : 850000}
+                      onQuoteChange={setOvernightStay}
+                    />
                   </div>
                 )}
 
@@ -457,13 +520,21 @@ export default function RoomDetailPage() {
                 <div className="space-y-3 pt-2">
                   <Button
                     size="lg"
-                    disabled={isLoadingConfig || (activeMode === "FIXED" && !selectedSlot)}
+                    disabled={isReserveDisabled}
                     onClick={() => {
                       if (!isAuthenticated) {
                         openSignInModal();
-                      } else {
+                      } else if (activeMode === "FIXED" && selectedSlot) {
                         alert(
-                          `Đặt phòng thành công (Mô phỏng)!\nPhòng: ${room.name}\nNgày: ${selectedDate}\nKhung giờ: ${selectedSlot?.startTime} - ${selectedSlot?.endTime}\nGiá: ${displayPrice}₫`,
+                          `Đặt phòng thành công (Mô phỏng Fixed Slot)!\nPhòng: ${room.name}\nNgày: ${selectedDate}\nKhung giờ: ${selectedSlot.startTime} - ${selectedSlot.endTime}\nGiá: ${displayPrice}₫`,
+                        );
+                      } else if (activeMode === "CUSTOM" && customSelection) {
+                        alert(
+                          `Đặt phòng thành công (Mô phỏng Custom Time)!\nPhòng: ${room.name}\nNgày bắt đầu: ${customSelection.startDate}\nGiờ nhận: ${customSelection.startTime}\nGiờ trả: ${customSelection.endTime} (${customSelection.endDate})\nThời lượng: ${customSelection.durationMinutes / 60}h\nGiá: ${displayPrice}₫`,
+                        );
+                      } else if (activeMode === "OVERNIGHT" && overnightStay) {
+                        alert(
+                          `Đặt phòng thành công (Mô phỏng Overnight)!\nPhòng: ${room.name}\nNhận phòng: ${overnightStay.checkInDate} (từ 14:00)\nTrả phòng: ${overnightStay.checkOutDate} (trước 11:00)\nSố đêm: ${overnightStay.numberOfNights} đêm\nTổng giá: ${displayPrice}₫`,
                         );
                       }
                     }}
@@ -476,9 +547,21 @@ export default function RoomDetailPage() {
                       </>
                     ) : activeMode === "FIXED" && !selectedSlot ? (
                       "Vui lòng chọn 1 khung giờ"
+                    ) : activeMode === "CUSTOM" && !customSelection ? (
+                      "Vui lòng chọn giờ hợp lệ (min 3h)"
+                    ) : activeMode === "OVERNIGHT" && !overnightStay ? (
+                      "Vui lòng chọn ngày nhận & trả phòng"
                     ) : (
                       <>
-                        <span>Đặt slot {selectedSlot ? `${selectedSlot.startTime}–${selectedSlot.endTime}` : ""}</span>
+                        <span>
+                          {activeMode === "FIXED" && selectedSlot
+                            ? `Đặt slot ${selectedSlot.startTime}–${selectedSlot.endTime}`
+                            : activeMode === "CUSTOM" && customSelection
+                            ? `Đặt ${customSelection.startTime}–${customSelection.endTime}`
+                            : activeMode === "OVERNIGHT" && overnightStay
+                            ? `Đặt ${overnightStay.numberOfNights} đêm (${overnightStay.checkInDate} → ${overnightStay.checkOutDate})`
+                            : "Tiếp tục đặt phòng"}
+                        </span>
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </>
                     )}
