@@ -1,27 +1,19 @@
 "use client";
 
 import * as React from "react";
-import { useSearchParams, useRouter } from "next/navigation";
 import { MOCK_PROPERTIES, MOCK_PHYSICAL_ROOMS } from "@/lib/mock/inventory-data";
-import type { Property, PhysicalRoom } from "@/lib/types/inventory";
+import type { Property } from "@/lib/types/inventory";
 import { PropertyHeader } from "@/components/property/property-header";
 import { PropertyGallery } from "@/components/property/property-gallery";
 import { RoomCard } from "@/components/room/room-card";
-import { RoomBookingPanel } from "@/components/room/room-booking-panel";
 import { HealthStatus } from "@/components/health-status";
 import { BedSingle } from "lucide-react";
 
 export default function BookingPage() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-
   // Selected property state (defaults to Lumora Đà Lạt)
   const [selectedProperty, setSelectedProperty] = React.useState<Property>(
     MOCK_PROPERTIES[0],
   );
-
-  // Local selected room id for instant UI responsiveness
-  const [localRoomId, setLocalRoomId] = React.useState<string | null>(null);
 
   // Filter physical rooms belonging to the selected property
   const propertyRooms = React.useMemo(() => {
@@ -30,36 +22,8 @@ export default function BookingPage() {
     );
   }, [selectedProperty.id]);
 
-  // Derived active room: reads from URL ?room= or local selection
-  const roomParam = searchParams.get("room");
-  const activeRoomId = roomParam ?? localRoomId;
-
-  const selectedRoom = React.useMemo(() => {
-    if (!activeRoomId) return null;
-    return propertyRooms.find((r) => r.id === activeRoomId) ?? null;
-  }, [activeRoomId, propertyRooms]);
-
-  const handleSelectRoom = (room: PhysicalRoom) => {
-    if (room.isBlocked) return;
-    setLocalRoomId(room.id);
-    const newParams = new URLSearchParams(searchParams.toString());
-    newParams.set("room", room.id);
-    router.replace(`/booking?${newParams.toString()}`, { scroll: false });
-  };
-
-  const handleClosePanel = () => {
-    setLocalRoomId(null);
-    const newParams = new URLSearchParams(searchParams.toString());
-    newParams.delete("room");
-    router.replace(`/booking?${newParams.toString()}`, { scroll: false });
-  };
-
   const handleSelectProperty = (property: Property) => {
     setSelectedProperty(property);
-    setLocalRoomId(null);
-    const newParams = new URLSearchParams(searchParams.toString());
-    newParams.delete("room");
-    router.replace(`/booking?${newParams.toString()}`, { scroll: false });
   };
 
   const availableRoomsCount = propertyRooms.filter((r) => !r.isBlocked).length;
@@ -72,7 +36,7 @@ export default function BookingPage() {
           properties={MOCK_PROPERTIES}
           selectedProperty={selectedProperty}
           onSelectProperty={handleSelectProperty}
-          hasSelectedRoom={Boolean(selectedRoom)}
+          hasSelectedRoom={false}
         />
       </section>
 
@@ -102,15 +66,10 @@ export default function BookingPage() {
           </p>
         </div>
 
-        {/* Room Cards Grid */}
+        {/* Room Cards Grid - clicking a room navigates to dedicated page /booking/[roomId] */}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {propertyRooms.map((room) => (
-            <RoomCard
-              key={room.id}
-              room={room}
-              isSelected={selectedRoom?.id === room.id}
-              onSelect={handleSelectRoom}
-            />
+            <RoomCard key={room.id} room={room} />
           ))}
         </div>
       </section>
@@ -144,12 +103,6 @@ export default function BookingPage() {
           </div>
         </div>
       </section>
-
-      {/* 5. Expandable Booking Workspace Panel (UI-2.3) */}
-      <RoomBookingPanel
-        room={selectedRoom}
-        onClose={handleClosePanel}
-      />
 
       {/* Development Backend Connection Status */}
       {process.env.NODE_ENV === "development" && <HealthStatus />}

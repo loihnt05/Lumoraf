@@ -3,8 +3,13 @@
 import * as React from "react";
 import Image from "next/image";
 import type { PhysicalRoom } from "@/lib/types/inventory";
+import type { BookingMode, RoomTypeBookingConfig } from "@/lib/types/booking-config";
+import { DEFAULT_BOOKING_CONFIG } from "@/lib/types/booking-config";
+import { getRoomTypeBookingConfig } from "@/lib/api/booking-config";
+import { BookingModeTabs } from "@/components/booking/booking-mode-tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/lib/auth/auth-context";
 import {
   X,
@@ -14,8 +19,8 @@ import {
   Sparkles,
   CheckCircle2,
   Lock,
+  ArrowRight,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 type RoomBookingPanelProps = {
   room: PhysicalRoom | null;
@@ -24,13 +29,64 @@ type RoomBookingPanelProps = {
 
 export function RoomBookingPanel({ room, onClose }: RoomBookingPanelProps) {
   const { isAuthenticated, openSignInModal } = useAuth();
-  const [selectedMode, setSelectedMode] = React.useState<"FIXED" | "CUSTOM" | "OVERNIGHT">("FIXED");
+  const [activeMode, setActiveMode] = React.useState<BookingMode>("FIXED");
+  const [config, setConfig] = React.useState<RoomTypeBookingConfig | null>(null);
+  const [isLoadingConfig, setIsLoadingConfig] = React.useState(true);
+
+  // Load backend booking configuration for the room's roomType
+  React.useEffect(() => {
+    let isSubscribed = true;
+
+    async function loadConfig() {
+      try {
+        if (!room?.roomTypeId) {
+          if (isSubscribed) {
+            setConfig(null);
+            setIsLoadingConfig(false);
+          }
+          return;
+        }
+
+        const cfg = await getRoomTypeBookingConfig(room.roomTypeId);
+        if (isSubscribed) {
+          setConfig(cfg);
+          setIsLoadingConfig(false);
+        }
+      } catch {
+        if (isSubscribed) {
+          // Fallback safe state: use defaults
+          setConfig(DEFAULT_BOOKING_CONFIG);
+          setIsLoadingConfig(false);
+        }
+      }
+    }
+
+    void loadConfig();
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [room?.roomTypeId]);
+
+  const handleModeChange = (newMode: BookingMode) => {
+    setActiveMode(newMode);
+    // UI-3.1: Reset incompatible transient selections when changing mode
+    // (e.g. fixed slot index, custom time start/end, overnight dates)
+  };
 
   if (!room) return null;
 
-  const formattedPrice = room.roomType
+  const basePriceFormatted = room.roomType
     ? new Intl.NumberFormat("vi-VN").format(room.roomType.basePrice)
     : "299.000";
+
+  // Price estimate label based on mode
+  const priceUnitLabel =
+    activeMode === "OVERNIGHT"
+      ? " / đêm (giá theo đêm)"
+      : activeMode === "CUSTOM"
+      ? " / 3h (tính theo giờ)"
+      : " / slot 3h (giá ưu đãi)";
 
   return (
     <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-lg flex-col border-l border-border bg-surface shadow-2xl backdrop-blur-md transition-transform duration-300 ease-in-out animate-in slide-in-from-right sm:max-w-xl">
@@ -38,7 +94,7 @@ export function RoomBookingPanel({ room, onClose }: RoomBookingPanelProps) {
       <div className="flex items-center justify-between border-b border-border/80 p-5 md:px-7">
         <div>
           <span className="text-caption uppercase tracking-[0.2em] text-primary">
-            Booking Workspace
+            Đặt phòng trực tuyến
           </span>
           <h2 className="text-heading text-xl font-medium tracking-tight text-foreground">
             {room.name}
@@ -57,7 +113,7 @@ export function RoomBookingPanel({ room, onClose }: RoomBookingPanelProps) {
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto p-5 md:p-7 space-y-6">
         {/* Room Photography Context */}
-        <div className="relative aspect-16/9 w-full overflow-hidden rounded-xl border border-border/60 bg-muted">
+        <div className="relative aspect-16/9 w-full overflow-hidden rounded-2xl border border-border/60 bg-muted">
           <Image
             src={room.images[0] || "/placeholder.jpg"}
             alt={room.name}
@@ -66,7 +122,7 @@ export function RoomBookingPanel({ room, onClose }: RoomBookingPanelProps) {
             className="object-cover"
           />
           <div className="absolute top-3 left-3 flex gap-2">
-            <Badge className="bg-surface/90 text-foreground font-semibold">
+            <Badge className="bg-surface/90 text-foreground font-semibold shadow-xs">
               {room.roomNumber}
             </Badge>
             <Badge className="bg-surface/80 text-muted-foreground">
@@ -75,7 +131,7 @@ export function RoomBookingPanel({ room, onClose }: RoomBookingPanelProps) {
           </div>
         </div>
 
-        {/* Room Key Specs */}
+        {/* Room Specifications Context */}
         <div className="flex items-center justify-between rounded-xl bg-muted/40 p-4 text-xs text-muted-foreground">
           <div className="flex items-center gap-1.5">
             <Users className="h-4 w-4 text-primary" />
@@ -100,54 +156,52 @@ export function RoomBookingPanel({ room, onClose }: RoomBookingPanelProps) {
           </p>
         )}
 
-        {/* Booking Modes Selection Preview (Preparation for Stage UI-3) */}
-        <div className="space-y-3 pt-2">
-          <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            1. Chọn kiểu lưu trú (Stay mode)
-          </label>
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { id: "FIXED", label: "Fixed 3h", desc: "Tiết kiệm nhất" },
-              { id: "CUSTOM", label: "Custom time", desc: "Bước 30m, min 3h" },
-              { id: "OVERNIGHT", label: "Overnight", desc: "Nghỉ qua đêm" },
-            ].map((mode) => {
-              const isSelected = selectedMode === mode.id;
-              return (
-                <button
-                  key={mode.id}
-                  type="button"
-                  onClick={() => setSelectedMode(mode.id as typeof selectedMode)}
-                  className={cn(
-                    "flex flex-col items-center justify-center rounded-xl border p-3 text-center transition-all",
-                    isSelected
-                      ? "border-primary bg-primary/5 text-primary ring-1 ring-primary"
-                      : "border-border/80 bg-surface hover:bg-muted/50 text-foreground",
-                  )}
-                >
-                  <span className="text-xs font-semibold">{mode.label}</span>
-                  <span className="mt-1 text-[10px] text-muted-foreground">{mode.desc}</span>
-                </button>
-              );
-            })}
+        {/* STAGE UI-3: Booking Mode Selector with Dynamic Config Contract */}
+        <div className="space-y-3 pt-1">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Hình thức lưu trú
+            </label>
+            <span className="text-[11px] text-muted-foreground">
+              Cấu hình theo loại phòng
+            </span>
           </div>
+
+          {isLoadingConfig ? (
+            <div className="space-y-2">
+              <Skeleton className="h-12 w-full rounded-full" />
+              <Skeleton className="h-16 w-full rounded-xl" />
+            </div>
+          ) : config ? (
+            <BookingModeTabs
+              roomId={room.id}
+              config={config}
+              activeMode={activeMode}
+              onChangeMode={handleModeChange}
+            />
+          ) : (
+            <div className="rounded-xl border border-border bg-muted/40 p-4 text-xs text-muted-foreground">
+              Không tải được cấu hình đặt phòng.
+            </div>
+          )}
         </div>
 
-        {/* Stage Notice */}
-        <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-xs text-primary leading-relaxed">
+        {/* Stage Roadmap Linkage Note */}
+        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 text-xs leading-relaxed text-primary">
           <div className="flex items-center gap-2 font-medium">
             <Sparkles className="h-4 w-4 shrink-0" />
-            <span>Chế độ tương tác đặt phòng</span>
+            <span>Sẵn sàng cho Time Selection (Stage UI-4 to UI-6)</span>
           </div>
           <p className="mt-1.5 text-muted-foreground">
-            Bạn đang chọn <strong>{room.name}</strong> theo chế độ <strong>{selectedMode}</strong>. Lịch chọn slot cố định 3h, timeline thời gian linh hoạt và báo giá từ backend sẽ được kết nối ở Stage UI-3 & UI-4.
+            Chế độ <strong>{activeMode}</strong> đã được xác định. Bước tiếp theo sẽ kết nối bộ chọn slot cố định (Fixed Slot Picker), timeline thời gian linh hoạt (Custom Time timeline) và lịch qua đêm (Overnight calendar).
           </p>
         </div>
 
-        {/* Amenities Full List */}
+        {/* Room Amenities Highlights */}
         {room.roomType?.amenities && room.roomType.amenities.length > 0 && (
           <div className="space-y-3 pt-2">
-            <h4 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Tiện nghi phòng
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Tiện nghi & Dịch vụ đi kèm
             </h4>
             <div className="grid grid-cols-2 gap-2.5">
               {room.roomType.amenities.map((amenity) => (
@@ -167,11 +221,11 @@ export function RoomBookingPanel({ room, onClose }: RoomBookingPanelProps) {
       {/* Panel Bottom Footer with Reserve Action */}
       <div className="border-t border-border/80 bg-surface/90 p-5 md:px-7 backdrop-blur-xs flex items-center justify-between gap-4">
         <div>
-          <span className="text-xs text-muted-foreground">Giá ước tính</span>
+          <span className="text-xs text-muted-foreground">Giá tham khảo</span>
           <p className="text-price text-xl font-bold text-foreground">
-            {formattedPrice}₫
+            {basePriceFormatted}₫
             <span className="text-xs font-normal text-muted-foreground">
-              {selectedMode === "OVERNIGHT" ? " / đêm" : " / 3h"}
+              {priceUnitLabel}
             </span>
           </p>
         </div>
@@ -179,14 +233,17 @@ export function RoomBookingPanel({ room, onClose }: RoomBookingPanelProps) {
         <div className="flex items-center gap-3">
           <Button
             size="lg"
+            disabled={isLoadingConfig}
             onClick={() => {
               if (!isAuthenticated) {
                 openSignInModal();
               } else {
-                alert(`Đang chuẩn bị đặt ${room.name} (${selectedMode}). Sẵn sàng cho Stage UI-3/UI-4!`);
+                alert(
+                  `Bạn đã chọn ${room.name} theo hình thức ${activeMode}.\nSẵn sàng bước vào Stage UI-4 (Fixed Slot Picker) & Stage UI-5 (Custom Time)!`,
+                );
               }
             }}
-            className="rounded-full px-8 font-medium shadow-md"
+            className="rounded-full px-7 font-medium shadow-md"
           >
             {!isAuthenticated ? (
               <>
@@ -194,7 +251,10 @@ export function RoomBookingPanel({ room, onClose }: RoomBookingPanelProps) {
                 Sign in to Reserve
               </>
             ) : (
-              "Tiếp tục chọn giờ"
+              <>
+                <span>Chọn thời gian</span>
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </>
             )}
           </Button>
         </div>
