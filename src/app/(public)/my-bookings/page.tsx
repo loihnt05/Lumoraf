@@ -86,7 +86,7 @@ function getStatusBadge(status: BookingStatus) {
 }
 
 export default function MyBookingsPage() {
-  const { user, isAuthenticated, isLoading: isAuthLoading, openSignInModal } = useAuth();
+  const { user, isAuthenticated, isLoading: isAuthLoading, openSignInModal, login } = useAuth();
   const [bookings, setBookings] = React.useState<BookingRecord[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [statusFilter, setStatusFilter] = React.useState<string>("ALL");
@@ -209,9 +209,23 @@ export default function MyBookingsPage() {
             Vui lòng đăng nhập tài khoản Lumora để quản lý các đơn đang chờ thanh toán hoặc xem mã đặt phòng đã xác nhận.
           </p>
         </div>
-        <Button onClick={openSignInModal} size="lg" className="rounded-full px-8">
-          Sign in to Lumora
-        </Button>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          <Button
+            onClick={() => void login("google")}
+            size="lg"
+            className="rounded-full px-7 w-full sm:w-auto"
+          >
+            Khách demo: Loi Tran
+          </Button>
+          <Button
+            onClick={openSignInModal}
+            variant="outline"
+            size="lg"
+            className="rounded-full px-7 w-full sm:w-auto"
+          >
+            Đăng nhập tài khoản khác
+          </Button>
+        </div>
       </div>
     );
   }
@@ -224,8 +238,11 @@ export default function MyBookingsPage() {
           <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">
             Guest Portal · My Bookings
           </span>
-          <h1 className="text-display text-3xl sm:text-4xl font-normal tracking-tight text-foreground">
-            Đặt phòng của tôi
+          <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-normal tracking-tight text-foreground">
+            Kỳ nghỉ của{" "}
+            <span className="font-script text-4xl sm:text-5xl lg:text-6xl text-[#C48443] font-normal not-italic px-1 inline-block -rotate-1 align-baseline">
+              bạn.
+            </span>
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground">
             Quản lý các kỳ nghỉ sắp tới, nhận mã khóa thông minh 6 số (P7.11), mã QR Check-in (P7.9) và chính sách hủy/hoàn tiền tự động (P7.2).

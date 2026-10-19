@@ -250,8 +250,11 @@ export default function AdminBookingConfigPage() {
               {selectedRoomType?.name}
             </span>
           </div>
-          <h1 className="text-display text-3xl sm:text-4xl font-normal tracking-tight text-foreground">
-            Cấu hình Thời gian, Bảng giá & Khóa phòng
+          <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-normal tracking-tight text-foreground">
+            Cấu hình thời gian &{" "}
+            <span className="font-script text-4xl sm:text-5xl lg:text-6xl text-[#C48443] font-normal not-italic px-1 inline-block -rotate-1 align-baseline">
+              bảng giá.
+            </span>
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground max-w-2xl">
             Điều chỉnh quy tắc đặt phòng theo từng hạng phòng (`RoomType`) và quản lý trạng thái khóa bảo trì (`is_blocked`) của từng phòng vật lý mà không cần deploy lại giao diện.

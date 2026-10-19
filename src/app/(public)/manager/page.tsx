@@ -264,8 +264,11 @@ export default function ManagerDashboardPage() {
             <Building2 className="h-4 w-4" />
             <span>Stage 6 · Operations & Property Management</span>
           </div>
-          <h1 className="text-display text-3xl md:text-4xl font-normal tracking-tight text-foreground">
-            Bảng Điều Hành Chi Nhánh (Manager Console)
+          <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-normal tracking-tight text-foreground">
+            Bảng điều hành &{" "}
+            <span className="font-script text-4xl sm:text-5xl lg:text-6xl text-[#C48443] font-normal not-italic px-1 inline-block -rotate-1 align-baseline">
+              operations.
+            </span>
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground max-w-2xl">
             Quản lý nhận/trả phòng (Check-in/Check-out), quét mã QR Check-in và

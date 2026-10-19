@@ -325,8 +325,11 @@ export default function AdminMonitorPage() {
               RBAC Guard: ADMIN Only
             </Badge>
           </div>
-          <h1 className="text-display text-3xl sm:text-4xl font-normal tracking-tight text-foreground">
-            System Monitor & Quản trị phân quyền
+          <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-normal tracking-tight text-foreground">
+            System monitor &{" "}
+            <span className="font-script text-4xl sm:text-5xl lg:text-6xl text-[#C48443] font-normal not-italic px-1 inline-block -rotate-1 align-baseline">
+              insights.
+            </span>
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground max-w-2xl">
             Trung tâm giám sát vận hành toàn hệ thống, phân quyền Manager theo

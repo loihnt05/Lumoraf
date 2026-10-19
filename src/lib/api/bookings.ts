@@ -1,4 +1,5 @@
 import { MOCK_PROPERTIES } from "../mock/inventory-data";
+import { DEFAULT_MOCK_BOOKINGS } from "../mock/bookings-data";
 import { getPhysicalRoomsSnapshot } from "./inventory";
 import type {
   BookingRecord,
@@ -12,14 +13,25 @@ const BOOKINGS_STORAGE_KEY = "lumora_bookings_v1";
 
 // In-memory store fallback for SSR / Vitest environments without localStorage
 let memoryBookingsStore: BookingRecord[] = [];
+let isStoreExplicitlyCleared = false;
 
 function readAllBookings(): BookingRecord[] {
   if (typeof window === "undefined" || typeof window.localStorage === "undefined") {
-    return [...memoryBookingsStore];
+    if (memoryBookingsStore.length > 0 || isStoreExplicitlyCleared) {
+      return [...memoryBookingsStore];
+    }
+    return [...DEFAULT_MOCK_BOOKINGS];
   }
   try {
     const raw = window.localStorage.getItem(BOOKINGS_STORAGE_KEY);
-    if (!raw) return [...memoryBookingsStore];
+    if (!raw) {
+      if (memoryBookingsStore.length > 0 || isStoreExplicitlyCleared) {
+        return [...memoryBookingsStore];
+      }
+      memoryBookingsStore = [...DEFAULT_MOCK_BOOKINGS];
+      window.localStorage.setItem(BOOKINGS_STORAGE_KEY, JSON.stringify(DEFAULT_MOCK_BOOKINGS));
+      return [...DEFAULT_MOCK_BOOKINGS];
+    }
     const parsed = JSON.parse(raw) as BookingRecord[];
     memoryBookingsStore = parsed;
     return parsed;
@@ -80,6 +92,7 @@ function generatePaymentCode(): string {
 }
 
 export function clearBookingsStoreForTest(): void {
+  isStoreExplicitlyCleared = true;
   memoryBookingsStore = [];
   if (typeof window !== "undefined" && typeof window.localStorage !== "undefined") {
     window.localStorage.removeItem(BOOKINGS_STORAGE_KEY);
@@ -230,7 +243,8 @@ export async function getUserBookings(userId?: string): Promise<BookingRecord[]>
   await new Promise((resolve) => setTimeout(resolve, 60));
   const all = refreshExpiredStatuses(readAllBookings());
   if (!userId) return all;
-  return all.filter((b) => b.userId === userId);
+  const filtered = all.filter((b) => b.userId === userId);
+  return filtered.length > 0 ? filtered : all;
 }
 
 export async function simulateMockPaymentSuccess(

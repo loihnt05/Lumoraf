@@ -26,8 +26,8 @@ export type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { label: "Booking", href: "/booking" },
   { label: "My Bookings", href: "/my-bookings" },
-  { label: "Manager Ops", href: "/manager" },
-  { label: "Admin Config", href: "/admin/booking-config" },
+  { label: "Manager Ops", href: "/manager/ops" },
+  { label: "Admin Config", href: "/admin/config" },
   { label: "Admin Monitor", href: "/admin/monitor" },
 ];
 
@@ -100,7 +100,10 @@ export function StickyNav() {
           {/* Desktop Navigation Links */}
           <div className="hidden items-center gap-8 md:flex">
             {NAV_ITEMS.map((item) => {
-              const isActive = pathname === item.href;
+              const isActive =
+                pathname === item.href ||
+                (item.href === "/manager/ops" && pathname?.startsWith("/manager")) ||
+                (item.href === "/admin/config" && (pathname?.startsWith("/admin/config") || pathname?.startsWith("/admin/booking-config")));
               return (
                 <Link
                   key={item.href}
@@ -231,17 +234,28 @@ export function StickyNav() {
             <div className="pb-3 border-b border-border/60">
               <p className="text-caption uppercase tracking-[0.2em] text-muted-foreground">Menu</p>
               <div className="mt-3 flex flex-col space-y-2">
-                {NAV_ITEMS.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={closeMobileMenu}
-                    className="flex items-center justify-between rounded-xl px-3 py-2.5 text-base font-medium text-foreground hover:bg-muted"
-                  >
-                    <span>{item.label}</span>
-                    <span className="text-xs text-primary font-normal">Active</span>
-                  </Link>
-                ))}
+                {NAV_ITEMS.map((item) => {
+                  const isActive =
+                    pathname === item.href ||
+                    (item.href === "/manager/ops" && pathname?.startsWith("/manager")) ||
+                    (item.href === "/admin/config" && (pathname?.startsWith("/admin/config") || pathname?.startsWith("/admin/booking-config")));
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={closeMobileMenu}
+                      className={cn(
+                        "flex items-center justify-between rounded-xl px-3 py-2.5 text-base font-medium transition-colors",
+                        isActive
+                          ? "bg-primary/10 text-primary font-semibold"
+                          : "text-foreground hover:bg-muted",
+                      )}
+                    >
+                      <span>{item.label}</span>
+                      {isActive && <span className="text-xs text-primary font-semibold">Active</span>}
+                    </Link>
+                  );
+                })}
               </div>
             </div>
 

@@ -9,7 +9,6 @@ import {
   Star,
   MapPin,
   ThumbsUp,
-  Info,
   Eye,
   TrendingDown,
   Bath,
@@ -215,7 +214,7 @@ export function RoomCard({ room }: RoomCardProps) {
             ) : (
               <TrendingDown className="h-3 w-3 shrink-0" />
             )}
-            <span className="truncate max-w-[120px]">{meta.badge.text}</span>
+            <span className="whitespace-nowrap font-medium">{meta.badge.text}</span>
           </div>
         )}
 
@@ -278,7 +277,7 @@ export function RoomCard({ room }: RoomCardProps) {
       </div>
 
       {/* 2. Content Section matching user screenshot */}
-      <div className="flex flex-1 flex-col justify-between p-4 gap-2.5">
+      <div className="flex flex-1 flex-col justify-between p-3.5 sm:p-4 gap-2.5">
         <div className="space-y-1.5">
           {/* Row 1: Property Type & Star Rating */}
           <div className="flex items-center gap-1.5 text-xs text-gray-500">
@@ -293,7 +292,7 @@ export function RoomCard({ room }: RoomCardProps) {
           </div>
 
           {/* Row 2: Title */}
-          <h3 className="text-base font-bold text-gray-900 leading-snug line-clamp-1">
+          <h3 className="text-sm sm:text-base font-bold text-gray-900 leading-snug line-clamp-2 min-h-[2.5rem]">
             <Link
               href={room.isBlocked ? "#" : `/booking/${room.id}`}
               className={cn(
@@ -312,65 +311,62 @@ export function RoomCard({ room }: RoomCardProps) {
           </div>
 
           {/* Row 4: Guest Rating Pill & Reviews */}
-          <div className="flex items-center gap-1.5 pt-0.5 text-xs">
-            <span className="inline-flex items-center gap-1 rounded bg-[#132238] px-1.5 py-0.5 text-[11px] font-bold text-white leading-none">
+          <div className="flex items-center gap-1.5 pt-0.5 text-xs min-w-0">
+            <span className="inline-flex items-center gap-1 rounded bg-[#132238] px-1.5 py-0.5 text-[11px] font-bold text-white leading-none shrink-0">
               <ThumbsUp className="h-2.5 w-2.5 fill-white" />
               <span>{meta.ratingScore}</span>
             </span>
-            <span className="font-bold text-gray-900">{meta.ratingLabel}</span>
-            <span className="text-gray-400">
+            <span className="font-bold text-gray-900 shrink-0">{meta.ratingLabel}</span>
+            <span className="text-gray-400 truncate text-[11px] sm:text-xs">
               ({meta.reviewsCount.toLocaleString()} {meta.reviewsCount === 1 ? "Review" : "Reviews"})
             </span>
           </div>
 
           {/* Row 5: Specs Line */}
-          <div className="text-xs text-gray-500 font-normal">
+          <div className="text-xs text-gray-500 font-normal truncate">
             {meta.specs}
           </div>
 
           {/* Row 6: Amenity Badges */}
-          <div className="flex items-center gap-1.5 flex-wrap pt-1">
+          <div className="flex items-center gap-1.5 flex-nowrap overflow-hidden pt-0.5">
             {amenities.slice(0, 2).map((amenity) => (
               <span
                 key={amenity.id}
-                className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50/70 px-2 py-0.5 text-[11px] text-gray-600 font-normal"
+                className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50/70 px-2 py-0.5 text-[11px] text-gray-600 font-normal shrink-0"
               >
                 {getAmenityIcon(amenity.id)}
                 <span>{amenity.name}</span>
               </span>
             ))}
-            <span className="inline-flex items-center justify-center rounded-full border border-gray-200 bg-gray-50/70 h-5 w-6 text-gray-400">
+            <span className="inline-flex items-center justify-center rounded-full border border-gray-200 bg-gray-50/70 h-5 w-6 text-gray-400 shrink-0">
               <MoreHorizontal className="h-3 w-3" />
             </span>
           </div>
         </div>
 
         {/* Row 7: Bottom Row (Price & View Deal button) */}
-        <div className="mt-3 flex items-end justify-between border-t border-gray-100 pt-3">
-          <div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-lg sm:text-xl font-extrabold tracking-tight text-gray-900 font-mono">
-                {formattedPrice}₫
-              </span>
-              <span className="text-[11px] text-gray-500 font-normal inline-flex items-center gap-0.5">
-                /slot 3h
-                <Info className="h-3 w-3 text-gray-400" />
-              </span>
-            </div>
+        <div className="mt-2.5 flex items-end justify-between gap-2 border-t border-gray-100 pt-2.5">
+          <div className="flex items-baseline gap-1 whitespace-nowrap shrink-0 pb-0.5">
+            <span className="font-sans text-[15px] sm:text-base font-bold tracking-tight text-[#132238] tabular-nums">
+              {formattedPrice}₫
+            </span>
+            <span className="text-[11px] text-gray-500 font-normal whitespace-nowrap">
+              / 3h slot
+            </span>
           </div>
 
-          <div className="flex flex-col items-end">
-            <span className="text-[10px] font-bold text-[#14233c] mb-1">
+          <div className="flex flex-col items-end shrink-0">
+            <span className="text-[10px] font-bold text-[#14233c] mb-1 leading-tight">
               {meta.provider}
             </span>
             {room.isBlocked ? (
-              <span className="rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-gray-400 cursor-not-allowed">
+              <span className="rounded-md bg-gray-100 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-gray-400 cursor-not-allowed whitespace-nowrap">
                 Tạm khóa
               </span>
             ) : (
               <Link
                 href={`/booking/${room.id}`}
-                className="rounded-lg bg-[#14233c] hover:bg-[#1f375a] px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-white shadow-xs transition-colors text-center"
+                className="rounded-md bg-[#14233c] hover:bg-[#1f375a] px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-white shadow-xs transition-colors text-center whitespace-nowrap"
               >
                 VIEW DEAL
               </Link>

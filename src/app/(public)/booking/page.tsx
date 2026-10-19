@@ -107,16 +107,18 @@ export default function BookingPage() {
             className="font-serif text-3xl sm:text-4xl lg:text-5xl font-normal text-[#132238] tracking-tight leading-tight"
           >
             Boutique hotel stays worth the{" "}
-            <span className="italic font-serif text-[#C48443]">weekend.</span>
+            <span className="font-script text-4xl sm:text-5xl lg:text-6xl text-[#C48443] font-normal not-italic px-1 inline-block -rotate-1 align-baseline">
+              weekend.
+            </span>
           </h2>
         </div>
 
         {/* Filter Tabs & View All Link Row */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pt-2">
+        <div className="w-full min-w-0 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pt-2">
           <div
             role="tablist"
             aria-label="Lọc danh sách phòng theo chi nhánh hoặc hạng phòng"
-            className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar"
+            className="w-full sm:w-auto min-w-0 flex items-center gap-2 overflow-x-auto py-1 px-1 -mx-1 no-scrollbar touch-pan-x scroll-smooth"
           >
             {filterTabs.map((tab) => {
               const isActive = activeFilter === tab.id;
@@ -127,7 +129,7 @@ export default function BookingPage() {
                   aria-selected={isActive}
                   type="button"
                   onClick={() => handleTabClick(tab.id)}
-                  className={`min-h-[40px] rounded-lg px-4 py-2 text-xs font-semibold transition-all shadow-2xs whitespace-nowrap focus-visible:outline-2 focus-visible:outline-ring ${
+                  className={`min-h-[40px] shrink-0 rounded-lg px-4 py-2 text-xs font-semibold transition-all shadow-2xs whitespace-nowrap focus-visible:outline-2 focus-visible:outline-ring ${
                     isActive
                       ? "bg-[#132238] text-white shadow-sm"
                       : "bg-white border border-gray-200/90 text-gray-700 hover:border-gray-400 hover:text-gray-900"
@@ -142,7 +144,7 @@ export default function BookingPage() {
           <Link
             href="/booking"
             onClick={() => setActiveFilter("all")}
-            className="group inline-flex min-h-[36px] items-center gap-1.5 text-xs font-semibold text-gray-800 hover:text-black whitespace-nowrap self-start sm:self-auto transition-colors"
+            className="group inline-flex shrink-0 min-h-[36px] items-center gap-1.5 text-xs font-semibold text-gray-800 hover:text-black whitespace-nowrap self-start sm:self-auto transition-colors"
           >
             <span>View all stays</span>
             <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
@@ -156,7 +158,7 @@ export default function BookingPage() {
             onResetFilter={() => setActiveFilter("all")}
           />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6 pt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 pt-2">
             {displayedRooms.map((room) => (
               <RoomCard key={room.id} room={room} />
             ))}
