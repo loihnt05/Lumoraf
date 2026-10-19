@@ -1,4 +1,5 @@
-import type { Property, RoomType, PhysicalRoom, Amenity } from "@/lib/types/inventory";
+import type { Property, RoomType, PhysicalRoom, Amenity } from "../types/inventory";
+
 
 export const MOCK_AMENITIES: Record<string, Amenity> = {
   wifi: { id: "wifi", name: "High-speed Wi-Fi", icon: "wifi" },

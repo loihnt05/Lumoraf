@@ -64,83 +64,89 @@ export function AvailabilityTimeline({
         </div>
       </div>
 
-      {/* Visual Timeline Bar */}
-      <div className="relative rounded-xl border border-border/70 bg-surface p-3 shadow-xs">
-        {/* Hours ticks on top */}
-        <div className="relative mb-1.5 h-4 w-full">
-          {HOUR_TICKS.map((hour) => {
-            const minutes = hour * 60;
-            const leftPercent = getPercent(minutes);
-            return (
-              <span
-                key={hour}
-                style={{ left: `${leftPercent}%` }}
-                className="absolute -translate-x-1/2 text-[10px] font-medium text-muted-foreground tabular-nums"
-              >
-                {hour === 24 ? "00:00" : `${String(hour).padStart(2, "0")}:00`}
-              </span>
-            );
-          })}
-        </div>
-
-        {/* Main timeline track */}
-        <div className="relative h-9 w-full overflow-hidden rounded-lg bg-muted/60 border border-border/50">
-          {/* Subtle grid lines for each 2 hours */}
-          {HOUR_TICKS.map((hour) => {
-            const leftPercent = getPercent(hour * 60);
-            return (
-              <div
-                key={hour}
-                style={{ left: `${leftPercent}%` }}
-                className="absolute inset-y-0 w-px bg-border/40"
-              />
-            );
-          })}
-
-          {/* Render Unavailable (Booked / Cleaning) Ranges */}
-          {unavailableRanges.map((range) => {
-            const left = getPercent(range.startMinutes);
-            const right = getPercent(range.endMinutes);
-            const width = Math.max(0, right - left);
-
-            return (
-              <div
-                key={range.id}
-                style={{ left: `${left}%`, width: `${width}%` }}
-                title={`${range.label}: ${range.startTime} - ${range.endTime}`}
-                className="group absolute inset-y-0 flex items-center justify-center bg-neutral-400/80 hover:bg-neutral-500 transition-colors cursor-help"
-              >
-                <span className="hidden sm:inline-block truncate px-1 text-[9px] font-medium text-white select-none">
-                  Đã bận ({range.startTime}–{range.endTime})
+      {/* Visual Timeline Bar with Mobile Horizontal Scroll (UI-10.1) */}
+      <div
+        role="region"
+        aria-label={`Biểu đồ lịch trống từ 06:00 đến 24:00 ngày ${date}`}
+        className="relative overflow-x-auto rounded-xl border border-border/70 bg-surface p-3 shadow-xs"
+      >
+        <div className="min-w-[420px] sm:min-w-0">
+          {/* Hours ticks on top */}
+          <div className="relative mb-1.5 h-4 w-full">
+            {HOUR_TICKS.map((hour) => {
+              const minutes = hour * 60;
+              const leftPercent = getPercent(minutes);
+              return (
+                <span
+                  key={hour}
+                  style={{ left: `${leftPercent}%` }}
+                  className="absolute -translate-x-1/2 text-[10px] font-medium text-muted-foreground tabular-nums"
+                >
+                  {hour === 24 ? "00:00" : `${String(hour).padStart(2, "0")}:00`}
                 </span>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
 
-          {/* Render Customer's Selected Custom Range */}
-          {selectedStartMinutes !== null && selectedEndMinutes !== null && (
-            (() => {
-              const left = getPercent(selectedStartMinutes);
-              const right = getPercent(selectedEndMinutes);
+          {/* Main timeline track */}
+          <div className="relative h-9 w-full overflow-hidden rounded-lg bg-muted/60 border border-border/50">
+            {/* Subtle grid lines for each 2 hours */}
+            {HOUR_TICKS.map((hour) => {
+              const leftPercent = getPercent(hour * 60);
+              return (
+                <div
+                  key={hour}
+                  style={{ left: `${leftPercent}%` }}
+                  className="absolute inset-y-0 w-px bg-border/40"
+                />
+              );
+            })}
+
+            {/* Render Unavailable (Booked / Cleaning) Ranges */}
+            {unavailableRanges.map((range) => {
+              const left = getPercent(range.startMinutes);
+              const right = getPercent(range.endMinutes);
               const width = Math.max(0, right - left);
 
               return (
                 <div
+                  key={range.id}
                   style={{ left: `${left}%`, width: `${width}%` }}
-                  className={cn(
-                    "absolute inset-y-0 flex items-center justify-center shadow-md transition-all duration-300 z-10",
-                    hasConflict
-                      ? "bg-red-500 text-white animate-pulse"
-                      : "bg-primary text-primary-foreground",
-                  )}
+                  title={`${range.label}: ${range.startTime} - ${range.endTime}`}
+                  className="group absolute inset-y-0 flex items-center justify-center bg-neutral-400/80 hover:bg-neutral-500 transition-colors cursor-help"
                 >
-                  <span className="truncate px-1.5 text-[10px] font-bold tracking-tight">
-                    {hasConflict ? "Bị trùng lịch!" : "Đang chọn"}
+                  <span className="truncate px-1 text-[9px] font-medium text-white select-none">
+                    Đã bận ({range.startTime}–{range.endTime})
                   </span>
                 </div>
               );
-            })()
-          )}
+            })}
+
+            {/* Render Customer's Selected Custom Range */}
+            {selectedStartMinutes !== null && selectedEndMinutes !== null && (
+              (() => {
+                const left = getPercent(selectedStartMinutes);
+                const right = getPercent(selectedEndMinutes);
+                const width = Math.max(0, right - left);
+
+                return (
+                  <div
+                    style={{ left: `${left}%`, width: `${width}%` }}
+                    className={cn(
+                      "absolute inset-y-0 flex items-center justify-center shadow-md transition-all duration-300 z-10",
+                      hasConflict
+                        ? "bg-red-500 text-white animate-pulse"
+                        : "bg-primary text-primary-foreground",
+                    )}
+                  >
+                    <span className="truncate px-1.5 text-[10px] font-bold tracking-tight">
+                      {hasConflict ? "Bị trùng lịch!" : "Đang chọn"}
+                    </span>
+                  </div>
+                );
+              })()
+            )}
+          </div>
         </div>
       </div>
 

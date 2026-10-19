@@ -3,20 +3,31 @@
 import * as React from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { MOCK_PHYSICAL_ROOMS, MOCK_PROPERTIES } from "@/lib/mock/inventory-data";
+import { MOCK_PROPERTIES } from "@/lib/mock/inventory-data";
+import { getPhysicalRoomsSnapshot } from "@/lib/api/inventory";
 import { DEFAULT_BOOKING_CONFIG } from "@/lib/types/booking-config";
 import type { BookingMode, RoomTypeBookingConfig } from "@/lib/types/booking-config";
+import type { PhysicalRoom } from "@/lib/types/inventory";
 import type { FixedSlot } from "@/lib/types/slot";
 import type { UnavailableRange, CustomTimeSelection } from "@/lib/types/custom-time";
 import type { OvernightStay } from "@/lib/types/overnight";
+import type { PricingQuote, PricingQuoteRequest } from "@/lib/types/quote";
 import { getRoomTypeBookingConfig } from "@/lib/api/booking-config";
 import { getFixedSlotsAvailability } from "@/lib/api/availability";
 import { getUnavailableRanges } from "@/lib/api/custom-availability";
+import { fetchPricingQuote } from "@/lib/api/quote";
+import { createBooking } from "@/lib/api/bookings";
 import { BookingModeTabs } from "@/components/booking/booking-mode-tabs";
 import { DateSelector } from "@/components/booking/date-selector";
 import { FixedSlotPicker } from "@/components/booking/fixed-slot-picker";
 import { CustomTimePicker } from "@/components/booking/custom-time-picker";
 import { OvernightPicker } from "@/components/booking/overnight-picker";
+import {
+  BookingSummaryPanel,
+  MobileBookingBar,
+  type ReserveErrorState,
+} from "@/components/booking/booking-summary-panel";
+import { StaleAvailabilityWarning } from "@/components/booking/booking-edge-states";
 import { PropertyGallery } from "@/components/property/property-gallery";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,8 +44,6 @@ import {
   KeyRound,
   ShieldCheck,
   Ban,
-  Lock,
-  ArrowRight,
 } from "lucide-react";
 
 function getTodayString(): string {
@@ -45,21 +54,56 @@ function getTodayString(): string {
   return `${year}-${month}-${day}`;
 }
 
+function getNextDateString(dateStr: string): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const next = new Date(y, m - 1, d + 1);
+  const year = next.getFullYear();
+  const month = String(next.getMonth() + 1).padStart(2, "0");
+  const day = String(next.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export default function RoomDetailPage() {
   const params = useParams();
   const router = useRouter();
   const roomId = params?.roomId as string;
-  const { isAuthenticated, openSignInModal } = useAuth();
+  const { user, isAuthenticated, openSignInModal } = useAuth();
+
+  const [allRooms, setAllRooms] = React.useState<PhysicalRoom[]>(() =>
+    getPhysicalRoomsSnapshot(),
+  );
+  const [isDataStale, setIsDataStale] = React.useState(false);
+
+  React.useEffect(() => {
+    const syncRooms = () => {
+      setAllRooms(getPhysicalRoomsSnapshot());
+      setIsDataStale(true);
+    };
+    const idleTimer = window.setTimeout(() => {
+      setIsDataStale(true);
+    }, 180_000);
+
+    window.addEventListener("lumora_inventory_change", syncRooms);
+    window.addEventListener("lumora_config_change", syncRooms);
+    window.addEventListener("storage", syncRooms);
+    return () => {
+      window.clearTimeout(idleTimer);
+      window.removeEventListener("lumora_inventory_change", syncRooms);
+      window.removeEventListener("lumora_config_change", syncRooms);
+      window.removeEventListener("storage", syncRooms);
+    };
+  }, []);
 
   // Find room and associated property
   const room = React.useMemo(() => {
-    return MOCK_PHYSICAL_ROOMS.find((r) => r.id === roomId) ?? null;
-  }, [roomId]);
+    return allRooms.find((r) => r.id === roomId) ?? null;
+  }, [allRooms, roomId]);
 
   const property = React.useMemo(() => {
     if (!room) return null;
     return MOCK_PROPERTIES.find((p) => p.id === room.propertyId) ?? null;
   }, [room]);
+
 
   // Booking mode state
   const [activeMode, setActiveMode] = React.useState<BookingMode>("FIXED");
@@ -81,6 +125,15 @@ export default function RoomDetailPage() {
 
   // STAGE UI-6: Overnight stay state
   const [overnightStay, setOvernightStay] = React.useState<OvernightStay | null>(null);
+
+  // STAGE UI-7: Authoritative PricingQuote state
+  const [authoritativeQuote, setAuthoritativeQuote] = React.useState<PricingQuote | null>(null);
+  const [isLoadingQuote, setIsLoadingQuote] = React.useState(false);
+
+  // STAGE UI-8: Reserve submission & error state
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [reserveError, setReserveError] = React.useState<ReserveErrorState>(null);
+  const submittingLockRef = React.useRef(false);
 
   const roomTypeId = room?.roomTypeId;
 
@@ -169,8 +222,12 @@ export default function RoomDetailPage() {
     setIsLoadingSlots(true);
     setSlotsError(null);
     try {
-      const data = await getFixedSlotsAvailability(roomId, selectedDate);
+      const [data, ranges] = await Promise.all([
+        getFixedSlotsAvailability(roomId, selectedDate),
+        getUnavailableRanges(roomId, selectedDate),
+      ]);
       setFixedSlots(data);
+      setUnavailableRanges(ranges);
     } catch {
       setSlotsError("Không thể tải lịch slot cho ngày này. Vui lòng thử lại.");
     } finally {
@@ -178,25 +235,167 @@ export default function RoomDetailPage() {
     }
   }, [roomId, selectedDate]);
 
+  // STAGE UI-7.1: Build quote request from current valid selection
+  const quoteRequest = React.useMemo<PricingQuoteRequest | null>(() => {
+    if (!room || !property) return null;
+
+    if (activeMode === "FIXED") {
+      if (!selectedSlot) return null;
+      return {
+        roomId: room.id,
+        propertyId: property.id,
+        mode: "FIXED",
+        date: selectedDate,
+        slotId: selectedSlot.id,
+        slotStartTime: selectedSlot.startTime,
+        slotEndTime: selectedSlot.endTime,
+        slotPrice: selectedSlot.price,
+        basePrice: room.roomType?.basePrice,
+      };
+    }
+
+    if (activeMode === "CUSTOM") {
+      if (!customSelection || !customSelection.isValidDuration || customSelection.hasConflict) {
+        return null;
+      }
+      return {
+        roomId: room.id,
+        propertyId: property.id,
+        mode: "CUSTOM",
+        date: selectedDate,
+        customStartTime: customSelection.startTime,
+        customEndTime: customSelection.endTime,
+        customDurationMinutes: customSelection.durationMinutes,
+        customNightHours: customSelection.nightHours,
+        basePrice: room.roomType?.basePrice,
+      };
+    }
+
+    if (activeMode === "OVERNIGHT") {
+      if (!overnightStay || !overnightStay.isValid || !overnightStay.isAvailable) {
+        return null;
+      }
+      return {
+        roomId: room.id,
+        propertyId: property.id,
+        mode: "OVERNIGHT",
+        checkInDate: overnightStay.checkInDate,
+        checkOutDate: overnightStay.checkOutDate,
+        numberOfNights: overnightStay.numberOfNights,
+        basePrice: room.roomType?.basePrice,
+      };
+    }
+
+    return null;
+  }, [room, property, activeMode, selectedDate, selectedSlot, customSelection, overnightStay]);
+
+  // STAGE UI-7.1: Debounced authoritative quote fetch (250ms for CUSTOM, 50ms for FIXED/OVERNIGHT)
+  React.useEffect(() => {
+    const controller = new AbortController();
+    const delayMs = activeMode === "CUSTOM" ? 250 : 40;
+
+    const timer = setTimeout(async () => {
+      if (!quoteRequest) {
+        setAuthoritativeQuote(null);
+        setIsLoadingQuote(false);
+        return;
+      }
+
+      setIsLoadingQuote(true);
+      try {
+        const result = await fetchPricingQuote(quoteRequest, controller.signal);
+        if (!controller.signal.aborted) {
+          setAuthoritativeQuote(result);
+          setIsLoadingQuote(false);
+        }
+      } catch {
+        if (!controller.signal.aborted) {
+          setIsLoadingQuote(false);
+        }
+      }
+    }, delayMs);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [quoteRequest, activeMode]);
+
   // UI-4.1 & UI-5.1: Changing date cancels/resets previous selections
   const handleSelectDate = (newDate: string) => {
     setSelectedDate(newDate);
     setSelectedSlot(null);
     setCustomSelection(null);
+    setAuthoritativeQuote(null);
+    setReserveError(null);
     setIsLoadingSlots(true);
   };
 
   const handleSelectSlot = (slot: FixedSlot) => {
     setSelectedSlot(slot);
+    setReserveError(null);
   };
 
   const handleModeChange = (newMode: BookingMode) => {
     setActiveMode(newMode);
-    // UI-3.1: Reset incompatible transient selections when changing mode
+    // UI-3.1 & UI-7.2: Reset incompatible transient selections & summary when changing mode
     setSelectedSlot(null);
     setCustomSelection(null);
     setOvernightStay(null);
+    setAuthoritativeQuote(null);
+    setReserveError(null);
   };
+
+  // STAGE UI-8.1: Reserve Action (Auth guard + anti-double-click + 409/price-change handling)
+  const handleReserve = React.useCallback(
+    async (options?: { simulateConflict?: boolean; simulatePriceChange?: boolean }) => {
+      if (!isAuthenticated || !user) {
+        openSignInModal();
+        return;
+      }
+
+      if (!authoritativeQuote || submittingLockRef.current) {
+        return;
+      }
+
+      submittingLockRef.current = true;
+      setIsSubmitting(true);
+      setReserveError(null);
+
+      try {
+        const result = await createBooking({
+          userId: user.id,
+          guestName: user.name,
+          guestEmail: user.email,
+          quote: authoritativeQuote,
+          simulateConflict: options?.simulateConflict,
+          simulatePriceChange: options?.simulatePriceChange,
+        });
+
+        if (!result.ok) {
+          setReserveError({
+            code: result.errorCode,
+            message: result.message,
+          });
+
+          if (result.errorCode === "BOOKING_CONFLICT") {
+            setSelectedSlot(null);
+            await handleRefreshSlots();
+          } else if (result.errorCode === "PRICE_CHANGED" && result.refreshedQuote) {
+            setAuthoritativeQuote(result.refreshedQuote);
+          }
+          return;
+        }
+
+        // Navigate to Pending Booking & Mock Payment Screen (UI-8.2 & UI-8.3)
+        router.push(`/booking/checkout/${result.booking.id}`);
+      } finally {
+        submittingLockRef.current = false;
+        setIsSubmitting(false);
+      }
+    },
+    [isAuthenticated, user, authoritativeQuote, openSignInModal, handleRefreshSlots, router],
+  );
 
   // Handle missing room (404 state)
   if (!room || !property) {
@@ -217,47 +416,44 @@ export default function RoomDetailPage() {
     );
   }
 
-  // Price calculations based on mode
+  // Price calculations based on authoritative quote or starting price
   let displayPrice = room.roomType
     ? new Intl.NumberFormat("vi-VN").format(room.roomType.basePrice)
     : "299.000";
   let priceUnitLabel = " / slot 3h";
 
-  if (activeMode === "FIXED") {
-    if (selectedSlot) {
-      displayPrice = new Intl.NumberFormat("vi-VN").format(selectedSlot.price);
-      priceUnitLabel = ` (Slot ${selectedSlot.startTime}–${selectedSlot.endTime})`;
-    } else {
-      priceUnitLabel = " / slot 3h";
-    }
+  if (authoritativeQuote) {
+    displayPrice = new Intl.NumberFormat("vi-VN").format(authoritativeQuote.total);
+    priceUnitLabel = ` (${authoritativeQuote.durationLabel})`;
   } else if (activeMode === "CUSTOM") {
-    if (customSelection) {
-      displayPrice = new Intl.NumberFormat("vi-VN").format(customSelection.estimatedPrice);
-      priceUnitLabel = ` (${customSelection.startTime} – ${customSelection.endTime})`;
-    } else {
-      priceUnitLabel = " / 3h (tính theo giờ)";
-    }
+    priceUnitLabel = " / từ 3h (linh hoạt)";
   } else if (activeMode === "OVERNIGHT") {
-    if (overnightStay && overnightStay.isValid) {
-      displayPrice = new Intl.NumberFormat("vi-VN").format(overnightStay.total);
-      priceUnitLabel = ` (${overnightStay.numberOfNights} đêm)`;
-    } else {
-      const overnightBase = room.roomType ? Math.round(room.roomType.basePrice * 2.8) : 850000;
-      displayPrice = new Intl.NumberFormat("vi-VN").format(overnightBase);
-      priceUnitLabel = " / đêm";
-    }
+    const overnightBase = room.roomType ? Math.round((room.roomType.basePrice * 2.8) / 1000) * 1000 : 850000;
+    displayPrice = new Intl.NumberFormat("vi-VN").format(overnightBase);
+    priceUnitLabel = " / đêm";
   }
 
-  // Reserve button validation status
-  const isReserveDisabled =
-    isLoadingConfig ||
-    (activeMode === "FIXED" && !selectedSlot) ||
-    (activeMode === "CUSTOM" && !customSelection) ||
-    (activeMode === "OVERNIGHT" && (!overnightStay || !overnightStay.isValid || !overnightStay.isAvailable));
+  // Reserve button validation status & dynamic label
+  const isReserveDisabled = isLoadingConfig || !authoritativeQuote;
+
+  const reserveButtonLabel = !authoritativeQuote
+    ? activeMode === "FIXED"
+      ? "Vui lòng chọn 1 khung giờ"
+      : activeMode === "CUSTOM"
+      ? "Vui lòng chọn giờ hợp lệ (min 3h)"
+      : "Vui lòng chọn ngày nhận & trả phòng"
+    : activeMode === "FIXED" && selectedSlot
+    ? `Đặt slot ${selectedSlot.startTime}–${selectedSlot.endTime}`
+    : activeMode === "CUSTOM" && customSelection
+    ? `Đặt khung giờ ${customSelection.startTime}–${customSelection.endTime}`
+    : activeMode === "OVERNIGHT" && overnightStay
+    ? `Đặt ${overnightStay.numberOfNights} đêm lưu trú`
+    : "Tiếp tục đặt phòng";
 
   return (
-    <div className="space-y-10 md:space-y-14">
+    <div className="space-y-10 pb-24 md:space-y-14 lg:pb-6">
       {/* 1. Navigation Breadcrumb & Back Link */}
+
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border/60 pb-5">
         <Link
           href="/booking"
@@ -441,6 +637,22 @@ export default function RoomDetailPage() {
               </div>
             ) : (
               <>
+                {/* UI-10.2: Stale Availability / Config Warning */}
+                {isDataStale && (
+                  <StaleAvailabilityWarning
+                    isRefreshing={isLoadingSlots}
+                    onRefresh={() => {
+                      setIsDataStale(false);
+                      if (roomTypeId) {
+                        void getRoomTypeBookingConfig(roomTypeId).then((cfg) =>
+                          setConfig(cfg),
+                        );
+                      }
+                      void handleRefreshSlots();
+                    }}
+                  />
+                )}
+
                 {/* 2. STAGE UI-3: Booking Mode Selector Tabs */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
@@ -484,6 +696,15 @@ export default function RoomDetailPage() {
                       isLoading={isLoadingSlots}
                       onRefresh={handleRefreshSlots}
                       errorMessage={slotsError}
+                      date={selectedDate}
+                      onSelectNextDay={() =>
+                        handleSelectDate(getNextDateString(selectedDate))
+                      }
+                      onSwitchToCustom={
+                        config?.customEnabled
+                          ? () => handleModeChange("CUSTOM")
+                          : undefined
+                      }
                     />
                   </div>
                 )}
@@ -510,72 +731,51 @@ export default function RoomDetailPage() {
                   <div className="space-y-5 pt-1 border-t border-border/60">
                     <OvernightPicker
                       roomId={roomId}
-                      overnightBasePrice={room.roomType ? Math.round(room.roomType.basePrice * 2.8) : 850000}
+                      overnightBasePrice={
+                        config?.overnightPrice ??
+                        (room.roomType ? Math.round(room.roomType.basePrice * 2.8) : 850000)
+                      }
                       onQuoteChange={setOvernightStay}
                     />
                   </div>
                 )}
 
-                {/* 6. Reserve Action Button */}
-                <div className="space-y-3 pt-2 border-t border-border/60">
-                  <Button
-                    size="lg"
-                    disabled={isReserveDisabled}
-                    onClick={() => {
-                      if (!isAuthenticated) {
-                        openSignInModal();
-                      } else if (activeMode === "FIXED" && selectedSlot) {
-                        alert(
-                          `Đặt phòng thành công (Mô phỏng Fixed Slot)!\nPhòng: ${room.name}\nNgày: ${selectedDate}\nKhung giờ: ${selectedSlot.startTime} - ${selectedSlot.endTime}\nGiá: ${displayPrice}₫`,
-                        );
-                      } else if (activeMode === "CUSTOM" && customSelection) {
-                        alert(
-                          `Đặt phòng thành công (Mô phỏng Custom Time)!\nPhòng: ${room.name}\nNgày bắt đầu: ${customSelection.startDate}\nGiờ nhận: ${customSelection.startTime}\nGiờ trả: ${customSelection.endTime} (${customSelection.endDate})\nThời lượng: ${customSelection.durationMinutes / 60}h\nGiá: ${displayPrice}₫`,
-                        );
-                      } else if (activeMode === "OVERNIGHT" && overnightStay) {
-                        alert(
-                          `Đặt phòng thành công (Mô phỏng Overnight)!\nPhòng: ${room.name}\nNhận phòng: ${overnightStay.checkInDate} (từ 14:00)\nTrả phòng: ${overnightStay.checkOutDate} (trước 11:00)\nSố đêm: ${overnightStay.numberOfNights} đêm\nTổng giá: ${displayPrice}₫`,
-                        );
-                      }
-                    }}
-                    className="w-full justify-center rounded-full text-base font-medium shadow-md"
-                  >
-                    {!isAuthenticated ? (
-                      <>
-                        <Lock className="mr-2 h-4 w-4" />
-                        <span>Sign in to Reserve</span>
-                      </>
-                    ) : activeMode === "FIXED" && !selectedSlot ? (
-                      "Vui lòng chọn 1 khung giờ"
-                    ) : activeMode === "CUSTOM" && !customSelection ? (
-                      "Vui lòng chọn giờ hợp lệ (min 3h)"
-                    ) : activeMode === "OVERNIGHT" && !overnightStay ? (
-                      "Vui lòng chọn ngày nhận & trả phòng"
-                    ) : (
-                      <>
-                        <span>
-                          {activeMode === "FIXED" && selectedSlot
-                            ? `Đặt slot ${selectedSlot.startTime}–${selectedSlot.endTime}`
-                            : activeMode === "CUSTOM" && customSelection
-                            ? `Đặt ${customSelection.startTime}–${customSelection.endTime}`
-                            : activeMode === "OVERNIGHT" && overnightStay
-                            ? `Đặt ${overnightStay.numberOfNights} đêm (${overnightStay.checkInDate} → ${overnightStay.checkOutDate})`
-                            : "Tiếp tục đặt phòng"}
-                        </span>
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </>
-                    )}
-                  </Button>
 
-                  <p className="text-center text-[11px] text-muted-foreground">
-                    Chưa trừ tiền ngay. Giữ phòng trong 15 phút để hoàn tất thanh toán.
-                  </p>
-                </div>
+                {/* 6. STAGE UI-7 & UI-8: Authoritative Quote Summary & Reserve Action */}
+                <BookingSummaryPanel
+                  roomName={room.name}
+                  propertyName={property.name}
+                  quote={authoritativeQuote}
+                  isLoadingQuote={isLoadingQuote}
+                  isAuthenticated={isAuthenticated}
+                  isSubmitting={isSubmitting}
+                  isReserveDisabled={isReserveDisabled}
+                  reserveButtonLabel={reserveButtonLabel}
+                  reserveError={reserveError}
+                  onReserve={handleReserve}
+                />
               </>
             )}
           </div>
         </aside>
       </div>
+
+      {/* 7. Mobile Sticky Bottom Bar + Review Sheet (UI-7.2) */}
+      {!room.isBlocked && (
+        <MobileBookingBar
+          roomName={room.name}
+          propertyName={property.name}
+          quote={authoritativeQuote}
+          isLoadingQuote={isLoadingQuote}
+          isAuthenticated={isAuthenticated}
+          isSubmitting={isSubmitting}
+          isReserveDisabled={isReserveDisabled}
+          reserveButtonLabel={reserveButtonLabel}
+          reserveError={reserveError}
+          onReserve={handleReserve}
+        />
+      )}
     </div>
   );
 }
+

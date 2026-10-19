@@ -134,6 +134,36 @@ export function DateSelector({ selectedDate, onSelectDate }: DateSelectorProps) 
     }
   };
 
+  const handleDayKeyDown = (
+    e: React.KeyboardEvent<HTMLButtonElement>,
+    currentIndex: number,
+  ) => {
+    const selectableIndices = weekDays
+      .map((d, i) => (!d.isPast ? i : -1))
+      .filter((i) => i !== -1);
+    if (selectableIndices.length === 0) return;
+
+    const pos = selectableIndices.indexOf(currentIndex);
+    let nextIdx = -1;
+
+    if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+      e.preventDefault();
+      if (pos < selectableIndices.length - 1) {
+        nextIdx = selectableIndices[pos + 1];
+      }
+    } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+      e.preventDefault();
+      if (pos > 0) {
+        nextIdx = selectableIndices[pos - 1];
+      }
+    }
+
+    if (nextIdx !== -1) {
+      const targetDay = weekDays[nextIdx];
+      onSelectDate(targetDay.dateStr);
+    }
+  };
+
   return (
     <div className="space-y-3">
       {/* Header: Month title, Calendar picker trigger, and Week navigation */}
@@ -153,7 +183,7 @@ export function DateSelector({ selectedDate, onSelectDate }: DateSelectorProps) 
               onClick={handleOpenCalendar}
               title="Mở cuốn lịch chọn ngày bất kỳ"
               aria-label="Mở cuốn lịch chọn ngày bất kỳ"
-              className="flex h-7 items-center gap-1.5 rounded-lg border border-border/80 bg-surface px-2 text-[11px] font-medium text-foreground hover:bg-muted/60 transition-colors shadow-2xs"
+              className="flex min-h-[36px] items-center gap-1.5 rounded-lg border border-border/80 bg-surface px-2.5 text-[11px] font-medium text-foreground hover:bg-muted/60 transition-colors shadow-2xs focus-visible:outline-2 focus-visible:outline-ring"
             >
               <CalendarDays className="h-3.5 w-3.5 text-primary" />
               <span className="hidden sm:inline">Chọn ngày</span>
@@ -178,13 +208,13 @@ export function DateSelector({ selectedDate, onSelectDate }: DateSelectorProps) 
             aria-label="Tuần trước"
             title={canGoBack ? "Tuần trước" : "Không thể chọn ngày trong quá khứ"}
             className={cn(
-              "flex h-7 w-7 items-center justify-center rounded-full border border-border/80 bg-surface text-muted-foreground transition-colors shadow-2xs",
+              "flex h-9 w-9 items-center justify-center rounded-full border border-border/80 bg-surface text-muted-foreground transition-colors shadow-2xs focus-visible:outline-2 focus-visible:outline-ring",
               canGoBack
                 ? "hover:bg-muted hover:text-foreground cursor-pointer"
                 : "opacity-40 cursor-not-allowed",
             )}
           >
-            <ChevronLeft className="h-3.5 w-3.5" />
+            <ChevronLeft className="h-4 w-4" />
           </button>
 
           {/* Week Next Button */}
@@ -193,9 +223,9 @@ export function DateSelector({ selectedDate, onSelectDate }: DateSelectorProps) 
             onClick={handleNextWeek}
             aria-label="Tuần kế tiếp"
             title="Tuần kế tiếp"
-            className="flex h-7 w-7 items-center justify-center rounded-full border border-border/80 bg-surface text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shadow-2xs cursor-pointer"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-border/80 bg-surface text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shadow-2xs cursor-pointer focus-visible:outline-2 focus-visible:outline-ring"
           >
-            <ChevronRight className="h-3.5 w-3.5" />
+            <ChevronRight className="h-4 w-4" />
           </button>
         </div>
       </div>
@@ -203,20 +233,22 @@ export function DateSelector({ selectedDate, onSelectDate }: DateSelectorProps) 
       {/* 7-Day Week Grid (Vừa khít 100% độ rộng thẻ, không tràn, không cuộn) */}
       <div
         role="radiogroup"
-        aria-label="7 ngày trong tuần"
+        aria-label="Chọn ngày nhận phòng trong tuần"
         className="grid grid-cols-7 gap-1 sm:gap-1.5 w-full"
       >
-        {weekDays.map((item) => (
+        {weekDays.map((item, idx) => (
           <button
             key={item.dateStr}
             role="radio"
             aria-checked={item.isSelected}
             aria-disabled={item.isPast}
+            aria-label={`${item.dayOfWeek}, ngày ${item.dayNumber} tháng ${item.month} năm ${item.year}${item.isToday ? " (Hôm nay)" : ""}${item.isSelected ? " — Đang chọn" : ""}`}
             disabled={item.isPast}
             type="button"
             onClick={() => onSelectDate(item.dateStr)}
+            onKeyDown={(e) => handleDayKeyDown(e, idx)}
             className={cn(
-              "group relative flex h-14 sm:h-15 flex-col items-center justify-center rounded-xl p-1 transition-all duration-200 outline-none w-full min-w-0",
+              "group relative flex min-h-[56px] sm:h-15 flex-col items-center justify-center rounded-xl p-1 transition-all duration-200 outline-none w-full min-w-0",
               item.isPast
                 ? "opacity-35 cursor-not-allowed bg-muted/20 border border-border/40 text-muted-foreground"
                 : item.isSelected

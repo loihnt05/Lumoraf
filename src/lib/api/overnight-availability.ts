@@ -1,4 +1,4 @@
-import type { OvernightStay } from "@/lib/types/overnight";
+import type { OvernightStay } from "../types/overnight";
 
 export function getDaysDifference(startDateStr: string, endDateStr: string): number {
   const start = new Date(startDateStr);

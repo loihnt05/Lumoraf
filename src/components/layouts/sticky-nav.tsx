@@ -25,7 +25,12 @@ export type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   { label: "Booking", href: "/booking" },
+  { label: "My Bookings", href: "/my-bookings" },
+  { label: "Manager Ops", href: "/manager" },
+  { label: "Admin Config", href: "/admin/booking-config" },
+  { label: "Admin Monitor", href: "/admin/monitor" },
 ];
+
 
 function subscribeScroll(callback: () => void) {
   if (typeof window === "undefined") return () => {};

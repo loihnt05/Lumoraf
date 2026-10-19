@@ -131,6 +131,34 @@ export function BookingModeTabs({
   // Active Mode Details
   const currentModeInfo = modeOptions.find((m) => m.id === activeMode) ?? enabledModes[0];
 
+  const handleTabKeyDown = (
+    e: React.KeyboardEvent<HTMLButtonElement>,
+    currentIndex: number,
+  ) => {
+    if (enabledModes.length <= 1) return;
+    let nextIndex = -1;
+    if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+      e.preventDefault();
+      nextIndex = (currentIndex + 1) % enabledModes.length;
+    } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+      e.preventDefault();
+      nextIndex = (currentIndex - 1 + enabledModes.length) % enabledModes.length;
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      nextIndex = 0;
+    } else if (e.key === "End") {
+      e.preventDefault();
+      nextIndex = enabledModes.length - 1;
+    }
+
+    if (nextIndex !== -1) {
+      const nextMode = enabledModes[nextIndex].id;
+      handleSelectMode(nextMode);
+      const nextBtn = document.getElementById(`tab-${nextMode}`);
+      nextBtn?.focus();
+    }
+  };
+
   return (
     <div className="space-y-3">
       {/* Sonder-inspired Segmented Pill Control */}
@@ -139,7 +167,7 @@ export function BookingModeTabs({
         aria-label="Chọn hình thức lưu trú"
         className="flex w-full items-center rounded-full border border-border/60 bg-muted/50 p-1 backdrop-blur-xs"
       >
-        {enabledModes.map((mode) => {
+        {enabledModes.map((mode, idx) => {
           const isSelected = activeMode === mode.id;
           const Icon = mode.icon;
           return (
@@ -148,17 +176,19 @@ export function BookingModeTabs({
               role="tab"
               type="button"
               id={`tab-${mode.id}`}
+              tabIndex={isSelected ? 0 : -1}
               aria-selected={isSelected}
               aria-controls={`panel-${mode.id}`}
               onClick={() => handleSelectMode(mode.id)}
+              onKeyDown={(e) => handleTabKeyDown(e, idx)}
               className={cn(
-                "group relative flex flex-1 items-center justify-center gap-1.5 rounded-full py-2.5 px-3 text-xs font-medium transition-all duration-200 outline-none focus-visible:outline-2 focus-visible:outline-ring",
+                "group relative flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full py-2.5 px-3 text-xs font-medium transition-all duration-200 outline-none focus-visible:outline-2 focus-visible:outline-ring",
                 isSelected
                   ? "bg-surface text-foreground font-semibold shadow-xs"
                   : "text-muted-foreground hover:text-foreground hover:bg-surface/40",
               )}
             >
-              <Icon className={cn("h-3.5 w-3.5", isSelected ? "text-primary" : "text-muted-foreground")} />
+              <Icon className={cn("h-3.5 w-3.5 shrink-0", isSelected ? "text-primary" : "text-muted-foreground")} />
               <span>{mode.label}</span>
               {isSelected && (
                 <span className="hidden sm:inline-block ml-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-semibold text-primary">

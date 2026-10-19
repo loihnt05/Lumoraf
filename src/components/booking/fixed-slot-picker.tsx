@@ -4,7 +4,11 @@ import * as React from "react";
 import type { FixedSlot } from "@/lib/types/slot";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Clock, Check, Moon, RotateCw, AlertTriangle } from "lucide-react";
+import { Clock, Check, Moon, RotateCw } from "lucide-react";
+import {
+  AllSlotsBookedBanner,
+  NetworkErrorRetryBanner,
+} from "./booking-edge-states";
 import { cn } from "@/lib/utils";
 
 type FixedSlotPickerProps = {
@@ -14,6 +18,9 @@ type FixedSlotPickerProps = {
   isLoading: boolean;
   onRefresh: () => void;
   errorMessage?: string | null;
+  date?: string;
+  onSelectNextDay?: () => void;
+  onSwitchToCustom?: () => void;
 };
 
 export function FixedSlotPicker({
@@ -23,10 +30,17 @@ export function FixedSlotPicker({
   isLoading,
   onRefresh,
   errorMessage,
+  date,
+  onSelectNextDay,
+  onSwitchToCustom,
 }: FixedSlotPickerProps) {
   if (isLoading) {
     return (
-      <div className="space-y-2.5">
+      <div
+        role="status"
+        aria-label="Đang tải các khung giờ cố định"
+        className="space-y-2.5"
+      >
         <div className="flex items-center justify-between">
           <Skeleton className="h-4 w-32 rounded-md" />
           <Skeleton className="h-4 w-16 rounded-md" />
@@ -37,38 +51,67 @@ export function FixedSlotPicker({
           <Skeleton className="h-16 w-full rounded-2xl" />
           <Skeleton className="h-16 w-full rounded-2xl" />
         </div>
+        <span className="sr-only">Đang tải danh sách khung giờ...</span>
       </div>
     );
   }
 
   if (errorMessage) {
     return (
-      <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-xs text-red-700 space-y-3">
-        <div className="flex items-center gap-2 font-medium">
-          <AlertTriangle className="h-4 w-4 text-red-600 shrink-0" />
-          <span>{errorMessage}</span>
-        </div>
-        <button
-          type="button"
-          onClick={onRefresh}
-          className="inline-flex items-center gap-1.5 rounded-full border border-red-300 bg-surface px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100"
-        >
-          <RotateCw className="h-3 w-3" />
-          <span>Tải lại lịch trống</span>
-        </button>
-      </div>
+      <NetworkErrorRetryBanner
+        message={errorMessage}
+        onRetry={onRefresh}
+        isRetrying={isLoading}
+      />
     );
   }
 
   if (slots.length === 0) {
     return (
-      <div className="rounded-2xl border border-border/80 bg-muted/30 p-5 text-center text-xs text-muted-foreground space-y-2">
-        <Clock className="h-5 w-5 mx-auto text-muted-foreground/80" />
-        <p className="font-medium text-foreground">Không có slot khả dụng cho ngày này</p>
-        <p>Vui lòng chọn một ngày khác trong thanh lịch bên trên.</p>
-      </div>
+      <AllSlotsBookedBanner
+        date={date}
+        onSelectNextDay={onSelectNextDay}
+        onSwitchToCustom={onSwitchToCustom}
+      />
     );
   }
+
+  const allSlotsBooked = slots.every(
+    (s) => s.state === "BOOKED" || s.state === "UNAVAILABLE",
+  );
+
+  const handleSlotKeyDown = (
+    e: React.KeyboardEvent<HTMLButtonElement>,
+    currentIndex: number,
+  ) => {
+    const availableIndices = slots
+      .map((s, i) =>
+        s.state !== "BOOKED" && s.state !== "UNAVAILABLE" ? i : -1,
+      )
+      .filter((i) => i !== -1);
+
+    if (availableIndices.length === 0) return;
+    const pos = availableIndices.indexOf(currentIndex);
+    let nextIdx = -1;
+
+    if (e.key === "ArrowDown" || e.key === "ArrowRight") {
+      e.preventDefault();
+      nextIdx = availableIndices[(pos + 1) % availableIndices.length];
+    } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
+      e.preventDefault();
+      nextIdx =
+        availableIndices[
+          (pos - 1 + availableIndices.length) % availableIndices.length
+        ];
+    }
+
+    if (nextIdx !== -1) {
+      const nextSlot = slots[nextIdx];
+      onSelectSlot(nextSlot);
+      const el = document.getElementById(`fixed-slot-btn-${nextSlot.id}`);
+      el?.focus();
+    }
+  };
 
   return (
     <div className="space-y-3">
@@ -85,33 +128,47 @@ export function FixedSlotPicker({
           type="button"
           onClick={onRefresh}
           title="Làm mới lịch trống"
-          className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+          aria-label="Làm mới danh sách khung giờ trống"
+          className="flex min-h-[32px] items-center gap-1 rounded-full px-2 text-[11px] text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors focus-visible:outline-2 focus-visible:outline-ring"
         >
           <RotateCw className="h-3 w-3" />
           <span>Làm mới</span>
         </button>
       </div>
 
+      {/* UI-10.2: All slots booked recovery banner */}
+      {allSlotsBooked && (
+        <AllSlotsBookedBanner
+          date={date}
+          onSelectNextDay={onSelectNextDay}
+          onSwitchToCustom={onSwitchToCustom}
+        />
+      )}
+
       {/* Slots List (Sonder-style tactile cards) */}
       <div
         role="radiogroup"
-        aria-label="Danh sách khung giờ 3h"
+        aria-label="Danh sách khung giờ cố định"
         className="grid gap-2.5"
       >
-        {slots.map((slot) => {
+        {slots.map((slot, idx) => {
           const isSelected = slot.id === selectedSlotId;
           const isBooked = slot.state === "BOOKED";
           const isUnavailable = slot.state === "UNAVAILABLE";
           const isDisabled = isBooked || isUnavailable;
 
-          const formattedPrice = new Intl.NumberFormat("vi-VN").format(slot.price);
+          const formattedPrice = new Intl.NumberFormat("vi-VN").format(
+            slot.price,
+          );
 
           return (
             <button
               key={slot.id}
+              id={`fixed-slot-btn-${slot.id}`}
               role="radio"
               aria-checked={isSelected}
               aria-disabled={isDisabled}
+              aria-label={`Khung giờ ${slot.startTime} đến ${slot.endTime}, thời lượng ${slot.durationMinutes / 60} giờ, giá ${formattedPrice} đồng${slot.isNightWindow ? ", có phụ phí khung giờ đêm" : ""}${isDisabled ? ", đã có khách đặt" : isSelected ? ", đang chọn" : ", còn trống"}`}
               disabled={isDisabled}
               type="button"
               onClick={() => {
@@ -119,8 +176,9 @@ export function FixedSlotPicker({
                   onSelectSlot(slot);
                 }
               }}
+              onKeyDown={(e) => handleSlotKeyDown(e, idx)}
               className={cn(
-                "group relative flex items-center justify-between rounded-xl border p-3 text-left transition-all duration-200 outline-none",
+                "group relative flex min-h-[60px] items-center justify-between rounded-xl border p-3 text-left transition-all duration-200 outline-none",
                 isDisabled
                   ? "border-border/40 bg-muted/30 opacity-60 cursor-not-allowed text-muted-foreground"
                   : isSelected
@@ -130,11 +188,15 @@ export function FixedSlotPicker({
             >
               {/* Left Info: Start-End time & Duration */}
               <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span
                     className={cn(
                       "text-sm sm:text-base font-bold tabular-nums tracking-tight",
-                      isSelected ? "text-primary" : isDisabled ? "text-muted-foreground" : "text-foreground",
+                      isSelected
+                        ? "text-primary"
+                        : isDisabled
+                        ? "text-muted-foreground"
+                        : "text-foreground",
                     )}
                   >
                     {slot.startTime} – {slot.endTime}
@@ -153,9 +215,13 @@ export function FixedSlotPicker({
                 </div>
 
                 {isBooked ? (
-                  <p className="text-[10px] text-red-600 font-medium">Đã có khách đặt</p>
+                  <p className="text-[10px] text-red-600 font-medium">
+                    Đã có khách đặt
+                  </p>
                 ) : slot.surchargeNote ? (
-                  <p className="text-[10px] text-amber-700 font-medium">{slot.surchargeNote}</p>
+                  <p className="text-[10px] text-amber-700 font-medium">
+                    {slot.surchargeNote}
+                  </p>
                 ) : null}
               </div>
 
@@ -165,7 +231,11 @@ export function FixedSlotPicker({
                   <span
                     className={cn(
                       "text-price text-base font-bold tabular-nums",
-                      isSelected ? "text-primary" : isDisabled ? "text-muted-foreground line-through" : "text-foreground",
+                      isSelected
+                        ? "text-primary"
+                        : isDisabled
+                        ? "text-muted-foreground line-through"
+                        : "text-foreground",
                     )}
                   >
                     {formattedPrice}₫

@@ -2,11 +2,13 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { MOCK_PROPERTIES, MOCK_PHYSICAL_ROOMS } from "@/lib/mock/inventory-data";
-import type { Property } from "@/lib/types/inventory";
+import { MOCK_PROPERTIES } from "@/lib/mock/inventory-data";
+import { getPhysicalRoomsSnapshot } from "@/lib/api/inventory";
+import type { Property, PhysicalRoom } from "@/lib/types/inventory";
 import { PropertyHeader } from "@/components/property/property-header";
 import { PropertyGallery } from "@/components/property/property-gallery";
 import { RoomCard } from "@/components/room/room-card";
+import { EmptyRoomsState } from "@/components/booking/booking-edge-states";
 import { HealthStatus } from "@/components/health-status";
 import { ArrowRight } from "lucide-react";
 
@@ -15,6 +17,21 @@ export default function BookingPage() {
   const [selectedProperty, setSelectedProperty] = React.useState<Property>(
     MOCK_PROPERTIES[0],
   );
+  const [rooms, setRooms] = React.useState<PhysicalRoom[]>(() =>
+    getPhysicalRoomsSnapshot(),
+  );
+
+  React.useEffect(() => {
+    const syncRooms = () => setRooms(getPhysicalRoomsSnapshot());
+    window.addEventListener("lumora_inventory_change", syncRooms);
+    window.addEventListener("lumora_config_change", syncRooms);
+    window.addEventListener("storage", syncRooms);
+    return () => {
+      window.removeEventListener("lumora_inventory_change", syncRooms);
+      window.removeEventListener("lumora_config_change", syncRooms);
+      window.removeEventListener("storage", syncRooms);
+    };
+  }, []);
 
   // Active filter tab (matching user screenshot destinations / categories)
   const [activeFilter, setActiveFilter] = React.useState<string>("all");
@@ -31,17 +48,18 @@ export default function BookingPage() {
   // Filtered rooms based on active tab
   const displayedRooms = React.useMemo(() => {
     if (activeFilter === "all") {
-      return MOCK_PHYSICAL_ROOMS.filter((room) => room.status === "ACTIVE");
+      return rooms.filter((room) => room.status === "ACTIVE");
     }
     if (activeFilter === "prop-da-lat" || activeFilter === "prop-sai-gon") {
-      return MOCK_PHYSICAL_ROOMS.filter(
+      return rooms.filter(
         (room) => room.propertyId === activeFilter && room.status === "ACTIVE",
       );
     }
-    return MOCK_PHYSICAL_ROOMS.filter(
+    return rooms.filter(
       (room) => room.roomTypeId === activeFilter && room.status === "ACTIVE",
     );
-  }, [activeFilter]);
+  }, [activeFilter, rooms]);
+
 
   const handleSelectProperty = (property: Property) => {
     setSelectedProperty(property);
@@ -95,15 +113,21 @@ export default function BookingPage() {
 
         {/* Filter Tabs & View All Link Row */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pt-2">
-          <div className="flex flex-wrap items-center gap-2 overflow-x-auto pb-1">
+          <div
+            role="tablist"
+            aria-label="Lọc danh sách phòng theo chi nhánh hoặc hạng phòng"
+            className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar"
+          >
             {filterTabs.map((tab) => {
               const isActive = activeFilter === tab.id;
               return (
                 <button
                   key={tab.id}
+                  role="tab"
+                  aria-selected={isActive}
                   type="button"
                   onClick={() => handleTabClick(tab.id)}
-                  className={`rounded-lg px-4 py-2 text-xs font-semibold transition-all shadow-2xs whitespace-nowrap ${
+                  className={`min-h-[40px] rounded-lg px-4 py-2 text-xs font-semibold transition-all shadow-2xs whitespace-nowrap focus-visible:outline-2 focus-visible:outline-ring ${
                     isActive
                       ? "bg-[#132238] text-white shadow-sm"
                       : "bg-white border border-gray-200/90 text-gray-700 hover:border-gray-400 hover:text-gray-900"
@@ -118,19 +142,26 @@ export default function BookingPage() {
           <Link
             href="/booking"
             onClick={() => setActiveFilter("all")}
-            className="group inline-flex items-center gap-1.5 text-xs font-semibold text-gray-800 hover:text-black whitespace-nowrap self-start sm:self-auto transition-colors"
+            className="group inline-flex min-h-[36px] items-center gap-1.5 text-xs font-semibold text-gray-800 hover:text-black whitespace-nowrap self-start sm:self-auto transition-colors"
           >
             <span>View all stays</span>
             <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
           </Link>
         </div>
 
-        {/* 4-Column Room Cards Grid matching screenshot */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6 pt-2">
-          {displayedRooms.map((room) => (
-            <RoomCard key={room.id} room={room} />
-          ))}
-        </div>
+        {/* 4-Column Room Cards Grid or Empty State (UI-10.2) */}
+        {displayedRooms.length === 0 ? (
+          <EmptyRoomsState
+            filterLabel={filterTabs.find((t) => t.id === activeFilter)?.label}
+            onResetFilter={() => setActiveFilter("all")}
+          />
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6 pt-2">
+            {displayedRooms.map((room) => (
+              <RoomCard key={room.id} room={room} />
+            ))}
+          </div>
+        )}
       </section>
 
       {/* 4. Boutique Quality Banner */}

@@ -1,4 +1,4 @@
-import type { UnavailableRange } from "@/lib/types/custom-time";
+import type { UnavailableRange } from "../types/custom-time";
 
 export function timeToMinutes(timeStr: string): number {
   const [hours, mins] = timeStr.split(":").map(Number);
@@ -90,16 +90,13 @@ export function calculateCustomQuote(
   nightHours: number,
   basePrice: number = 299000,
 ): number {
-  // Base hourly rate based on 3h fixed slot price
-  const baseHourlyRate = Math.round(basePrice / 3);
+  // Custom hourly rate carries a ~15% flexibility rate compared to Fixed 3h bundle
+  const customHourlyRate = Math.round((basePrice * 1.15) / 3 / 1000) * 1000;
   const totalHours = durationMinutes / 60;
-  const normalHours = Math.max(0, totalHours - nightHours);
+  const baseCost = Math.round((totalHours * customHourlyRate) / 1000) * 1000;
+  // Night hours surcharge (+20% on hours inside 23:00 - 06:00)
+  const nightSurcharge = Math.round((nightHours * customHourlyRate * 0.2) / 1000) * 1000;
 
-  // Normal hours cost
-  const normalCost = normalHours * baseHourlyRate;
-  // Night hours cost (+20% surcharge)
-  const nightCost = nightHours * baseHourlyRate * 1.2;
-
-  // Round to thousands
-  return Math.round((normalCost + nightCost) / 1000) * 1000;
+  return baseCost + nightSurcharge;
 }
+
