@@ -24,6 +24,7 @@ export type NavItem = {
 };
 
 const NAV_ITEMS: NavItem[] = [
+  { label: "Availability", href: "/availability" },
   { label: "Booking", href: "/booking" },
   { label: "My Bookings", href: "/my-bookings" },
   { label: "Manager Ops", href: "/manager/ops" },
