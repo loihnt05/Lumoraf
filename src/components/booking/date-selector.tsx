@@ -167,15 +167,15 @@ export function DateSelector({ selectedDate, onSelectDate }: DateSelectorProps) 
   return (
     <div className="space-y-3">
       {/* Header: Month title, Calendar picker trigger, and Week navigation */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-1.5 sm:gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
           <CalendarIcon className="h-4 w-4 text-primary shrink-0" />
-          <span className="text-xs font-semibold text-foreground tracking-tight">
+          <span className="text-xs font-semibold text-foreground tracking-tight truncate">
             {headerMonthText}
           </span>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
           {/* Calendar Picker Trigger (Cuốn lịch) */}
           <div className="relative">
             <button
@@ -183,9 +183,9 @@ export function DateSelector({ selectedDate, onSelectDate }: DateSelectorProps) 
               onClick={handleOpenCalendar}
               title="Mở cuốn lịch chọn ngày bất kỳ"
               aria-label="Mở cuốn lịch chọn ngày bất kỳ"
-              className="flex min-h-[36px] items-center gap-1.5 rounded-lg border border-border/80 bg-surface px-2.5 text-[11px] font-medium text-foreground hover:bg-muted/60 transition-colors shadow-2xs focus-visible:outline-2 focus-visible:outline-ring"
+              className="flex min-h-[32px] sm:min-h-[36px] items-center gap-1 sm:gap-1.5 rounded-lg border border-border/80 bg-surface px-2 sm:px-2.5 text-[11px] font-medium text-foreground hover:bg-muted/60 transition-colors shadow-2xs focus-visible:outline-2 focus-visible:outline-ring"
             >
-              <CalendarDays className="h-3.5 w-3.5 text-primary" />
+              <CalendarDays className="h-3.5 w-3.5 text-primary shrink-0" />
               <span className="hidden sm:inline">Chọn ngày</span>
             </button>
             <input
@@ -208,7 +208,7 @@ export function DateSelector({ selectedDate, onSelectDate }: DateSelectorProps) 
             aria-label="Tuần trước"
             title={canGoBack ? "Tuần trước" : "Không thể chọn ngày trong quá khứ"}
             className={cn(
-              "flex h-9 w-9 items-center justify-center rounded-full border border-border/80 bg-surface text-muted-foreground transition-colors shadow-2xs focus-visible:outline-2 focus-visible:outline-ring",
+              "flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-border/80 bg-surface text-muted-foreground transition-colors shadow-2xs focus-visible:outline-2 focus-visible:outline-ring",
               canGoBack
                 ? "hover:bg-muted hover:text-foreground cursor-pointer"
                 : "opacity-40 cursor-not-allowed",
@@ -223,7 +223,7 @@ export function DateSelector({ selectedDate, onSelectDate }: DateSelectorProps) 
             onClick={handleNextWeek}
             aria-label="Tuần kế tiếp"
             title="Tuần kế tiếp"
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-border/80 bg-surface text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shadow-2xs cursor-pointer focus-visible:outline-2 focus-visible:outline-ring"
+            className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-border/80 bg-surface text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shadow-2xs cursor-pointer focus-visible:outline-2 focus-visible:outline-ring"
           >
             <ChevronRight className="h-4 w-4" />
           </button>

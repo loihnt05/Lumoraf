@@ -145,10 +145,10 @@ export function CustomTimePicker({
   return (
     <div className="space-y-5">
       {/* 1. Time Selectors (Start & End with 30-min step) */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
         {/* Check-in Time */}
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <div className="space-y-1.5 min-w-0">
+          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground truncate block">
             Giờ nhận phòng
           </label>
           <div className="relative">
@@ -164,7 +164,7 @@ export function CustomTimePicker({
                   setEndTime(minutesToTime(newStartMins + 180));
                 }
               }}
-              className="w-full appearance-none rounded-xl border border-border/80 bg-surface px-3.5 py-2.5 text-sm font-semibold text-foreground shadow-xs transition-colors hover:border-primary/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="w-full appearance-none rounded-xl border border-border/80 bg-surface px-2.5 sm:px-3.5 py-2 sm:py-2.5 pr-7 sm:pr-8 text-xs sm:text-sm font-semibold text-foreground shadow-xs transition-colors hover:border-primary/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 truncate"
             >
               {startOptions.map((t) => (
                 <option key={t} value={t}>
@@ -172,20 +172,20 @@ export function CustomTimePicker({
                 </option>
               ))}
             </select>
-            <Clock className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Clock className="pointer-events-none absolute right-2.5 sm:right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           </div>
         </div>
 
         {/* Check-out Time */}
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <div className="space-y-1.5 min-w-0">
+          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground truncate block">
             Giờ trả phòng
           </label>
           <div className="relative">
             <select
               value={endTime}
               onChange={(e) => setEndTime(e.target.value)}
-              className="w-full appearance-none rounded-xl border border-border/80 bg-surface px-3.5 py-2.5 text-sm font-semibold text-foreground shadow-xs transition-colors hover:border-primary/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="w-full appearance-none rounded-xl border border-border/80 bg-surface px-2.5 sm:px-3.5 py-2 sm:py-2.5 pr-7 sm:pr-8 text-xs sm:text-sm font-semibold text-foreground shadow-xs transition-colors hover:border-primary/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 truncate"
             >
               {endOptions.map((opt) => (
                 <option key={opt.timeStr} value={opt.timeStr}>
@@ -193,13 +193,13 @@ export function CustomTimePicker({
                 </option>
               ))}
             </select>
-            <Clock className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Clock className="pointer-events-none absolute right-2.5 sm:right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           </div>
         </div>
       </div>
 
       {/* 2. Duration & Realtime Status Badge */}
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-muted/40 p-3 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-muted/40 p-2.5 sm:p-3 text-xs">
         <div className="flex items-center gap-2">
           <span className="font-medium text-foreground">Thời lượng:</span>
           <span className="font-bold tabular-nums text-foreground">{durationText}</span>
@@ -207,18 +207,18 @@ export function CustomTimePicker({
 
         {/* Validation Status Badges */}
         {!isValidDuration ? (
-          <Badge className="bg-amber-100 text-amber-900 border-none flex items-center gap-1 font-medium">
-            <AlertCircle className="h-3.5 w-3.5 text-amber-700" />
+          <Badge className="bg-amber-100 text-amber-900 border-none flex items-center gap-1 font-medium text-[11px]">
+            <AlertCircle className="h-3.5 w-3.5 text-amber-700 shrink-0" />
             <span>Tối thiểu 3 giờ (180 phút)</span>
           </Badge>
         ) : hasConflict ? (
-          <Badge className="bg-red-100 text-red-900 border-none flex items-center gap-1 font-medium">
-            <AlertTriangle className="h-3.5 w-3.5 text-red-700" />
+          <Badge className="bg-red-100 text-red-900 border-none flex items-center gap-1 font-medium text-[11px]">
+            <AlertTriangle className="h-3.5 w-3.5 text-red-700 shrink-0" />
             <span>Trùng lịch đã đặt</span>
           </Badge>
         ) : (
-          <Badge className="bg-emerald-100 text-emerald-900 border-none flex items-center gap-1 font-medium">
-            <CheckCircle className="h-3.5 w-3.5 text-emerald-700" />
+          <Badge className="bg-emerald-100 text-emerald-900 border-none flex items-center gap-1 font-medium text-[11px]">
+            <CheckCircle className="h-3.5 w-3.5 text-emerald-700 shrink-0" />
             <span>Khung giờ hợp lệ</span>
           </Badge>
         )}
@@ -236,12 +236,12 @@ export function CustomTimePicker({
 
       {/* Night Window Surcharge Info (23:00 - 06:00) */}
       {nightHours > 0 && (
-        <div className="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-900">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50/80 p-2.5 sm:p-3 text-xs text-amber-900">
           <div className="flex items-center gap-2 font-medium">
             <Moon className="h-4 w-4 text-amber-700 shrink-0" />
             <span>Bao gồm {nightHours}h khung đêm (23:00 – 06:00)</span>
           </div>
-          <Badge className="bg-amber-200 text-amber-900 border-none font-semibold text-[10px]">
+          <Badge className="bg-amber-200 text-amber-900 border-none font-semibold text-[10px] shrink-0">
             +20% phụ phí
           </Badge>
         </div>

@@ -161,11 +161,11 @@ export function BookingModeTabs({
 
   return (
     <div className="space-y-3">
-      {/* Sonder-inspired Segmented Pill Control */}
+      {/* Segmented Tab Control: Responsive Equal-Width Grid */}
       <div
         role="tablist"
         aria-label="Chọn hình thức lưu trú"
-        className="flex w-full items-center rounded-full border border-border/60 bg-muted/50 p-1 backdrop-blur-xs"
+        className="grid w-full grid-flow-col auto-cols-fr gap-1 items-center rounded-2xl sm:rounded-full border border-border/60 bg-muted/50 p-1 backdrop-blur-xs"
       >
         {enabledModes.map((mode, idx) => {
           const isSelected = activeMode === mode.id;
@@ -182,32 +182,41 @@ export function BookingModeTabs({
               onClick={() => handleSelectMode(mode.id)}
               onKeyDown={(e) => handleTabKeyDown(e, idx)}
               className={cn(
-                "group relative flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full py-2.5 px-3 text-xs font-medium transition-all duration-200 outline-none focus-visible:outline-2 focus-visible:outline-ring",
+                "group relative flex min-h-[42px] sm:min-h-[44px] w-full min-w-0 items-center justify-center gap-1 sm:gap-1.5 rounded-xl sm:rounded-full py-2 px-1.5 sm:px-2.5 text-[11px] sm:text-xs font-medium transition-all duration-200 outline-none select-none focus-visible:outline-2 focus-visible:outline-ring",
                 isSelected
                   ? "bg-surface text-foreground font-semibold shadow-xs"
                   : "text-muted-foreground hover:text-foreground hover:bg-surface/40",
               )}
             >
-              <Icon className={cn("h-3.5 w-3.5 shrink-0", isSelected ? "text-primary" : "text-muted-foreground")} />
-              <span>{mode.label}</span>
-              {isSelected && (
-                <span className="hidden sm:inline-block ml-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-semibold text-primary">
-                  {mode.tag}
-                </span>
-              )}
+              <Icon
+                className={cn(
+                  "h-3.5 w-3.5 shrink-0 transition-colors",
+                  isSelected ? "text-primary" : "text-muted-foreground group-hover:text-foreground",
+                )}
+              />
+              <span className="truncate">{mode.label}</span>
             </button>
           );
         })}
       </div>
 
-      {/* Contextual Description Banner */}
+      {/* Contextual Description Banner with Active Mode Badge */}
       <div
         id={`panel-${currentModeInfo.id}`}
         role="tabpanel"
         aria-labelledby={`tab-${currentModeInfo.id}`}
-        className="rounded-xl border border-border/60 bg-muted/30 p-2.5 text-[11px] leading-relaxed text-muted-foreground animate-in fade-in-50 duration-200"
+        className="rounded-xl border border-border/60 bg-muted/30 p-3 text-xs leading-relaxed text-muted-foreground animate-in fade-in-50 duration-200 space-y-1.5"
       >
-        <p>{currentModeInfo.description}</p>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 font-semibold text-foreground">
+            <currentModeInfo.icon className="h-3.5 w-3.5 text-primary shrink-0" />
+            <span className="text-xs sm:text-sm">{currentModeInfo.label}</span>
+          </div>
+          <Badge className="bg-primary/10 text-primary text-[10px] font-semibold border-none shrink-0">
+            {currentModeInfo.tag}
+          </Badge>
+        </div>
+        <p className="text-[11px] text-muted-foreground leading-relaxed">{currentModeInfo.description}</p>
       </div>
     </div>
   );

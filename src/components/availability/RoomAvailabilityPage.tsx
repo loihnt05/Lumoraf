@@ -124,11 +124,11 @@ export function RoomAvailabilityPage() {
           checkOut={checkOut}
           duration={durationLabel(intent.duration, intent.customHours)}
         />
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {/* Sort */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Sort:</span>
-            <div className="flex gap-1">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <span className="text-xs text-muted-foreground shrink-0">Sort:</span>
+            <div className="flex flex-wrap gap-1">
               {(
                 [
                   { value: "recommended", label: "Recommended" },
@@ -139,7 +139,7 @@ export function RoomAvailabilityPage() {
                 <button
                   key={value}
                   onClick={() => setSort(value)}
-                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  className={`rounded-full px-2.5 sm:px-3 py-1 text-xs font-medium transition-colors shrink-0 whitespace-nowrap ${
                     sort === value
                       ? "bg-foreground text-background"
                       : "bg-muted text-muted-foreground hover:bg-border hover:text-foreground"
