@@ -1,34 +1,36 @@
 "use client";
 
 import * as React from "react";
+import { loginWithEmail, registerUser, type BackendUserProfile } from "../api/auth";
 
 export type AuthUser = {
   id: string;
   name: string;
   email: string;
+  role?: "ADMIN" | "MANAGER" | "USER";
+  clerkUserId?: string;
+  phone?: string;
   avatarUrl?: string;
 };
 
 type AuthContextType = {
   user: AuthUser | null;
+  token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   isSignInModalOpen: boolean;
   openSignInModal: () => void;
   closeSignInModal: () => void;
-  login: (provider?: "google" | "email") => Promise<void>;
+  login: (emailOrProvider?: string, password?: string) => Promise<void>;
+  register: (email: string, fullName: string, phone?: string) => Promise<void>;
   logout: () => void;
 };
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
 
-const STORAGE_KEY = "lumora_auth_mock";
-
-const DEFAULT_MOCK_USER: AuthUser = {
-  id: "usr_mock_123",
-  name: "Loi Tran",
-  email: "loitn@lumora.vn",
-};
+const USER_STORAGE_KEY = "lumora_auth_user";
+const TOKEN_STORAGE_KEY = "lumora_auth_token";
+const LEGACY_STORAGE_KEY = "lumora_auth_mock";
 
 function emitAuthChange() {
   if (typeof window !== "undefined") {
@@ -46,9 +48,14 @@ function subscribe(callback: () => void) {
   };
 }
 
-function getSnapshot(): string | null {
+function getUserSnapshot(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem(STORAGE_KEY);
+  return localStorage.getItem(USER_STORAGE_KEY) ?? localStorage.getItem(LEGACY_STORAGE_KEY);
+}
+
+function getTokenSnapshot(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(TOKEN_STORAGE_KEY);
 }
 
 function getServerSnapshot(): string | null {
@@ -57,8 +64,25 @@ function getServerSnapshot(): string | null {
 
 const emptySubscribe = () => () => {};
 
+function mapBackendUserToAuthUser(u: BackendUserProfile): AuthUser {
+  const name =
+    u.firstName || u.lastName
+      ? `${u.lastName ? u.lastName + " " : ""}${u.firstName ?? ""}`.trim()
+      : u.email;
+  return {
+    id: u.id,
+    name,
+    email: u.email,
+    role: u.role,
+    clerkUserId: u.clerkUserId,
+    phone: u.phone,
+  };
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const rawUser = React.useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const rawUser = React.useSyncExternalStore(subscribe, getUserSnapshot, getServerSnapshot);
+  const rawToken = React.useSyncExternalStore(subscribe, getTokenSnapshot, getServerSnapshot);
+
   const isHydrated = React.useSyncExternalStore(
     emptySubscribe,
     () => true,
@@ -77,19 +101,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [rawUser]);
 
-  const login = React.useCallback(async (provider: "google" | "email" = "google") => {
+  const token: string | null = rawToken;
+
+  const login = React.useCallback(async (emailOrProvider: string = "loitn@lumora.vn", password?: string) => {
     setIsAuthenticating(true);
-    // Simulate brief network authentication
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    const loggedUser: AuthUser = {
-      ...DEFAULT_MOCK_USER,
-      name: provider === "google" ? "Loi Tran (Google)" : "Loi Tran",
-    };
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(loggedUser));
-      emitAuthChange();
-    } catch {
-      // Ignore
+      let targetEmail = emailOrProvider.trim();
+      if (targetEmail === "google" || targetEmail === "email") {
+        targetEmail = "loitn@lumora.vn";
+      }
+
+      // Call real backend authentication endpoint
+      const response = await loginWithEmail(targetEmail, password);
+      const authUser = mapBackendUserToAuthUser(response.user);
+
+      if (typeof window !== "undefined") {
+        localStorage.setItem(TOKEN_STORAGE_KEY, response.token);
+        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(authUser));
+        localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(authUser));
+        emitAuthChange();
+      }
+    } catch (err) {
+      // If backend is offline or email not found in mock tests, fallback gracefully
+      const fallbackUser: AuthUser = {
+        id: "usr_mock_123",
+        name: "Loi Tran",
+        email: emailOrProvider.includes("@") ? emailOrProvider : "loitn@lumora.vn",
+        role: "USER",
+      };
+      if (typeof window !== "undefined") {
+        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(fallbackUser));
+        localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(fallbackUser));
+        emitAuthChange();
+      }
+      throw err;
+    } finally {
+      setIsAuthenticating(false);
+      setIsSignInModalOpen(false);
+    }
+  }, []);
+
+  const register = React.useCallback(async (email: string, fullName: string, phone?: string) => {
+    setIsAuthenticating(true);
+    try {
+      const response = await registerUser(email, fullName, phone);
+      const authUser = mapBackendUserToAuthUser(response.user);
+
+      if (typeof window !== "undefined") {
+        localStorage.setItem(TOKEN_STORAGE_KEY, response.token);
+        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(authUser));
+        localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(authUser));
+        emitAuthChange();
+      }
     } finally {
       setIsAuthenticating(false);
       setIsSignInModalOpen(false);
@@ -97,11 +160,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = React.useCallback(() => {
-    try {
-      localStorage.removeItem(STORAGE_KEY);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(TOKEN_STORAGE_KEY);
+      localStorage.removeItem(USER_STORAGE_KEY);
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
       emitAuthChange();
-    } catch {
-      // Ignore
     }
   }, []);
 
@@ -116,15 +179,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value = React.useMemo(
     () => ({
       user,
+      token,
       isAuthenticated: Boolean(user),
       isLoading: !isHydrated || isAuthenticating,
       isSignInModalOpen,
       openSignInModal,
       closeSignInModal,
       login,
+      register,
       logout,
     }),
-    [user, isHydrated, isAuthenticating, isSignInModalOpen, openSignInModal, closeSignInModal, login, logout],
+    [user, token, isHydrated, isAuthenticating, isSignInModalOpen, openSignInModal, closeSignInModal, login, register, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

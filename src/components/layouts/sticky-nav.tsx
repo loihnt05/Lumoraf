@@ -153,11 +153,29 @@ export function StickyNav() {
                   <span className="max-w-[120px] truncate text-xs font-medium text-foreground">
                     {user.name}
                   </span>
+                  {user.role && (
+                    <span
+                      className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold tracking-wider uppercase ${
+                        user.role === "ADMIN"
+                          ? "bg-purple-100 text-purple-700"
+                          : user.role === "MANAGER"
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {user.role}
+                    </span>
+                  )}
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel className="space-y-0.5">
-                  <p className="truncate text-sm font-semibold text-foreground">{user.name}</p>
+                  <div className="flex items-center justify-between">
+                    <p className="truncate text-sm font-semibold text-foreground">{user.name}</p>
+                    {user.role && (
+                      <span className="text-[10px] font-medium text-muted-foreground uppercase">{user.role}</span>
+                    )}
+                  </div>
                   <p className="truncate text-xs font-normal text-muted-foreground">{user.email}</p>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
@@ -167,6 +185,30 @@ export function StickyNav() {
                     <span>My Bookings</span>
                   </Link>
                 </DropdownMenuItem>
+                {(user.role === "MANAGER" || user.role === "ADMIN") && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/manager/ops" className="flex items-center gap-2">
+                      <UserIcon className="h-4 w-4 text-blue-600" />
+                      <span>Manager Ops</span>
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                {user.role === "ADMIN" && (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin/monitor" className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-purple-600" />
+                        <span>Admin Monitor</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin/config" className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-purple-400" />
+                        <span>Admin Config</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={logout}
