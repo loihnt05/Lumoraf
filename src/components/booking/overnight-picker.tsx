@@ -97,12 +97,12 @@ export function OvernightPicker({
   return (
     <div className="space-y-5">
       {/* 1. Date Range Input Boxes */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
         {/* Check-in Date */}
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-            <CalendarIcon className="h-3.5 w-3.5 text-primary" />
-            <span>Ngày nhận phòng</span>
+        <div className="space-y-1.5 min-w-0">
+          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 truncate">
+            <CalendarIcon className="h-3.5 w-3.5 text-primary shrink-0" />
+            <span className="truncate">Ngày nhận phòng</span>
           </label>
           <input
             type="date"
@@ -119,16 +119,16 @@ export function OvernightPicker({
                 setCheckOutDate(formatDateToLocal(nextDay));
               }
             }}
-            className="w-full rounded-xl border border-border/80 bg-surface px-3.5 py-2.5 text-sm font-semibold text-foreground shadow-xs transition-colors hover:border-primary/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full min-w-0 rounded-xl border border-border/80 bg-surface px-2.5 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-foreground shadow-xs transition-colors hover:border-primary/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
           <p className="text-[10px] text-muted-foreground">Nhận phòng từ 14:00</p>
         </div>
 
         {/* Check-out Date */}
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-            <CalendarIcon className="h-3.5 w-3.5 text-primary" />
-            <span>Ngày trả phòng</span>
+        <div className="space-y-1.5 min-w-0">
+          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 truncate">
+            <CalendarIcon className="h-3.5 w-3.5 text-primary shrink-0" />
+            <span className="truncate">Ngày trả phòng</span>
           </label>
           <input
             type="date"
@@ -138,7 +138,7 @@ export function OvernightPicker({
               setIsLoadingQuote(true);
               setCheckOutDate(e.target.value);
             }}
-            className="w-full rounded-xl border border-border/80 bg-surface px-3.5 py-2.5 text-sm font-semibold text-foreground shadow-xs transition-colors hover:border-primary/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full min-w-0 rounded-xl border border-border/80 bg-surface px-2.5 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-foreground shadow-xs transition-colors hover:border-primary/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
           <p className="text-[10px] text-muted-foreground">Trả phòng trước 11:00</p>
         </div>
@@ -157,7 +157,7 @@ export function OvernightPicker({
                 key={preset.nights}
                 type="button"
                 onClick={() => handleSelectPreset(preset.nights)}
-                className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-all ${
+                className={`rounded-full px-3 sm:px-3.5 py-1.5 text-xs font-medium transition-all ${
                   isActive
                     ? "bg-primary text-primary-foreground shadow-xs"
                     : "border border-border/80 bg-surface hover:border-primary/50 hover:bg-muted/40 text-foreground"
@@ -172,16 +172,16 @@ export function OvernightPicker({
 
       {/* 3. Realtime Duration Banner */}
       {quote && quote.numberOfNights > 0 && (
-        <div className="flex items-center justify-between rounded-xl bg-muted/40 p-3.5 text-xs">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-muted/40 p-3 sm:p-3.5 text-xs">
           <div className="flex items-center gap-2">
-            <Moon className="h-4 w-4 text-primary" />
+            <Moon className="h-4 w-4 text-primary shrink-0" />
             <span className="font-medium text-foreground">Kỳ nghỉ qua đêm:</span>
             <span className="font-bold text-foreground">
               {quote.numberOfNights} đêm
             </span>
           </div>
 
-          <Badge className="bg-primary/10 text-primary border-none font-semibold text-xs">
+          <Badge className="bg-primary/10 text-primary border-none font-semibold text-[11px] sm:text-xs shrink-0">
             {quote.checkInDate} → {quote.checkOutDate}
           </Badge>
         </div>

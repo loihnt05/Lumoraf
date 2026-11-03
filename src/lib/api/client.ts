@@ -28,7 +28,12 @@ export async function apiRequest<T>(
   headers.set("Accept", "application/json");
   if (init.body && !(init.body instanceof FormData))
     headers.set("Content-Type", "application/json");
-  if (token) headers.set("Authorization", `Bearer ${token}`);
+  const authToken =
+    token ??
+    (typeof window !== "undefined"
+      ? localStorage.getItem("lumora_auth_token") ?? undefined
+      : undefined);
+  if (authToken) headers.set("Authorization", `Bearer ${authToken}`);
   const timeout = AbortSignal.timeout(timeoutMs);
   const response = await fetch(
     `${baseUrl.replace(/\/$/, "")}/${path.replace(/^\//, "")}`,

@@ -2,6 +2,7 @@
 
 import type { ViewMode } from "@/lib/availability/types";
 import { cn } from "@/lib/utils";
+import { CalendarDays, LayoutGrid } from "lucide-react";
 
 interface Props {
   view: ViewMode;
@@ -10,21 +11,27 @@ interface Props {
 
 export function ViewSwitcher({ view, onViewChange }: Props) {
   return (
-    <div className="flex overflow-hidden rounded-full border border-border bg-muted p-0.5">
-      {(["day", "week"] as ViewMode[]).map((v) => (
-        <button
-          key={v}
-          onClick={() => onViewChange(v)}
-          className={cn(
-            "rounded-full px-3 py-1 text-xs font-medium capitalize transition-colors",
-            view === v
-              ? "bg-surface text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          {v === "day" ? "Day" : "7 Days"}
-        </button>
-      ))}
+    <div className="inline-flex overflow-hidden rounded-full border border-border/80 bg-muted/50 p-1 shadow-2xs">
+      {(["day", "week"] as ViewMode[]).map((v) => {
+        const isSelected = view === v;
+        const Icon = v === "day" ? LayoutGrid : CalendarDays;
+        return (
+          <button
+            key={v}
+            type="button"
+            onClick={() => onViewChange(v)}
+            className={cn(
+              "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-all duration-200 outline-none",
+              isSelected
+                ? "bg-surface text-foreground shadow-xs font-bold"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <Icon className="h-3.5 w-3.5 shrink-0" />
+            <span>{v === "day" ? "Theo ngày (Timeline)" : "Theo tuần (7 ngày)"}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }

@@ -178,7 +178,7 @@ export function FixedSlotPicker({
               }}
               onKeyDown={(e) => handleSlotKeyDown(e, idx)}
               className={cn(
-                "group relative flex min-h-[60px] items-center justify-between rounded-xl border p-3 text-left transition-all duration-200 outline-none",
+                "group relative flex min-h-[56px] sm:min-h-[60px] items-center justify-between gap-2 sm:gap-3 rounded-xl border p-2.5 sm:p-3 text-left transition-all duration-200 outline-none",
                 isDisabled
                   ? "border-border/40 bg-muted/30 opacity-60 cursor-not-allowed text-muted-foreground"
                   : isSelected
@@ -187,11 +187,11 @@ export function FixedSlotPicker({
               )}
             >
               {/* Left Info: Start-End time & Duration */}
-              <div className="space-y-0.5">
-                <div className="flex flex-wrap items-center gap-2">
+              <div className="space-y-0.5 min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                   <span
                     className={cn(
-                      "text-sm sm:text-base font-bold tabular-nums tracking-tight",
+                      "text-xs sm:text-base font-bold tabular-nums tracking-tight whitespace-nowrap",
                       isSelected
                         ? "text-primary"
                         : isDisabled
@@ -202,12 +202,12 @@ export function FixedSlotPicker({
                     {slot.startTime} – {slot.endTime}
                   </span>
 
-                  <span className="text-[10px] rounded-full bg-muted/80 px-2 py-0.5 text-muted-foreground font-medium">
+                  <span className="text-[10px] rounded-full bg-muted/80 px-2 py-0.5 text-muted-foreground font-medium shrink-0">
                     {slot.durationMinutes / 60}h
                   </span>
 
                   {slot.isNightWindow && (
-                    <Badge className="bg-amber-100 text-amber-800 border-none text-[9px] font-medium flex items-center gap-1 py-0 px-1.5">
+                    <Badge className="bg-amber-100 text-amber-800 border-none text-[9px] font-medium flex items-center gap-1 py-0 px-1.5 shrink-0">
                       <Moon className="h-2.5 w-2.5" />
                       <span>Đêm +20%</span>
                     </Badge>
@@ -219,18 +219,18 @@ export function FixedSlotPicker({
                     Đã có khách đặt
                   </p>
                 ) : slot.surchargeNote ? (
-                  <p className="text-[10px] text-amber-700 font-medium">
+                  <p className="text-[10px] text-amber-700 font-medium truncate">
                     {slot.surchargeNote}
                   </p>
                 ) : null}
               </div>
 
               {/* Right Info: Price and Checkbox/State indicator */}
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                 <div className="text-right">
                   <span
                     className={cn(
-                      "text-price text-base font-bold tabular-nums",
+                      "text-price text-sm sm:text-base font-bold tabular-nums",
                       isSelected
                         ? "text-primary"
                         : isDisabled

@@ -37,25 +37,25 @@ export function AvailabilityTimeline({
     <div className="space-y-3">
       {/* Header & Legend */}
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          <Clock className="h-3.5 w-3.5 text-primary" />
-          <span>Biểu đồ thời gian trong ngày ({date})</span>
+        <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground min-w-0">
+          <Clock className="h-3.5 w-3.5 text-primary shrink-0" />
+          <span className="truncate">Biểu đồ thời gian ({date})</span>
         </div>
 
         {/* Legend */}
-        <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-2.5 text-[11px] text-muted-foreground">
           <div className="flex items-center gap-1">
-            <span className="h-2.5 w-2.5 rounded-xs bg-muted border border-border" />
+            <span className="h-2.5 w-2.5 rounded-xs bg-muted border border-border shrink-0" />
             <span>Trống</span>
           </div>
           <div className="flex items-center gap-1">
-            <span className="h-2.5 w-2.5 rounded-xs bg-neutral-400" />
+            <span className="h-2.5 w-2.5 rounded-xs bg-neutral-400 shrink-0" />
             <span>Đã bận</span>
           </div>
           <div className="flex items-center gap-1">
             <span
               className={cn(
-                "h-2.5 w-2.5 rounded-xs",
+                "h-2.5 w-2.5 rounded-xs shrink-0",
                 hasConflict ? "bg-red-500" : "bg-primary",
               )}
             />
@@ -64,23 +64,27 @@ export function AvailabilityTimeline({
         </div>
       </div>
 
-      {/* Visual Timeline Bar with Mobile Horizontal Scroll (UI-10.1) */}
+      {/* Visual Timeline Bar: Responsive Fluid Track without horizontal overflow */}
       <div
         role="region"
         aria-label={`Biểu đồ lịch trống từ 06:00 đến 24:00 ngày ${date}`}
-        className="relative overflow-x-auto rounded-xl border border-border/70 bg-surface p-3 shadow-xs"
+        className="relative w-full overflow-hidden rounded-xl border border-border/70 bg-surface p-3 shadow-xs"
       >
-        <div className="min-w-[420px] sm:min-w-0">
-          {/* Hours ticks on top */}
+        <div className="w-full min-w-0">
+          {/* Hours ticks on top: Major ticks always visible, intermediate ticks on larger screens */}
           <div className="relative mb-1.5 h-4 w-full">
             {HOUR_TICKS.map((hour) => {
               const minutes = hour * 60;
               const leftPercent = getPercent(minutes);
+              const isMajor = hour === 6 || hour === 12 || hour === 18 || hour === 24;
               return (
                 <span
                   key={hour}
                   style={{ left: `${leftPercent}%` }}
-                  className="absolute -translate-x-1/2 text-[10px] font-medium text-muted-foreground tabular-nums"
+                  className={cn(
+                    "absolute -translate-x-1/2 text-[10px] font-medium text-muted-foreground tabular-nums whitespace-nowrap",
+                    !isMajor && "hidden sm:inline-block",
+                  )}
                 >
                   {hour === 24 ? "00:00" : `${String(hour).padStart(2, "0")}:00`}
                 </span>
